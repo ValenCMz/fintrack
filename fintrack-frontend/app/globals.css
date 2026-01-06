@@ -1,0 +1,251 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* Colores principales - Tailwind v4 requiere formato hsl() completo */
+  --color-background: hsl(220 20% 10%);
+  --color-foreground: hsl(210 20% 95%);
+  --color-card: hsl(220 20% 13%);
+  --color-card-foreground: hsl(210 20% 95%);
+  --color-popover: hsl(220 20% 13%);
+  --color-popover-foreground: hsl(210 20% 95%);
+  --color-primary: hsl(160 84% 39%);
+  --color-primary-foreground: hsl(220 20% 10%);
+  --color-secondary: hsl(220 20% 18%);
+  --color-secondary-foreground: hsl(210 20% 95%);
+  --color-muted: hsl(220 15% 20%);
+  --color-muted-foreground: hsl(215 15% 55%);
+  --color-accent: hsl(160 60% 45%);
+  --color-accent-foreground: hsl(220 20% 10%);
+  --color-destructive: hsl(0 72% 51%);
+  --color-destructive-foreground: hsl(210 20% 95%);
+  --color-border: hsl(220 15% 20%);
+  --color-input: hsl(220 15% 20%);
+  --color-ring: hsl(160 84% 39%);
+
+  /* Colores del sidebar */
+  --color-sidebar: hsl(220 20% 8%);
+  --color-sidebar-foreground: hsl(210 20% 95%);
+  --color-sidebar-primary: hsl(160 84% 39%);
+  --color-sidebar-primary-foreground: hsl(220 20% 10%);
+  --color-sidebar-accent: hsl(220 20% 15%);
+  --color-sidebar-accent-foreground: hsl(210 20% 95%);
+  --color-sidebar-border: hsl(220 15% 15%);
+  --color-sidebar-ring: hsl(160 84% 39%);
+
+  /* Colores personalizados de finanzas */
+  --color-income: hsl(160 84% 39%);
+  --color-expense: hsl(10 80% 60%);
+  --color-warning: hsl(38 92% 50%);
+  --color-info: hsl(210 100% 60%);
+
+  /* Fuentes */
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+
+  /* Radios */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+}
+
+@layer base {
+  :root {
+    /* Variables CSS para uso en componentes personalizados */
+    --background: 220 20% 10%;
+    --foreground: 210 20% 95%;
+    --card: 220 20% 13%;
+    --card-foreground: 210 20% 95%;
+    --popover: 220 20% 13%;
+    --popover-foreground: 210 20% 95%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 220 20% 10%;
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 210 20% 95%;
+    --muted: 220 15% 20%;
+    --muted-foreground: 215 15% 55%;
+    --accent: 160 60% 45%;
+    --accent-foreground: 220 20% 10%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 20% 95%;
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 160 84% 39%;
+    --radius: 0.75rem;
+
+    /* Custom finance colors */
+    --income: 160 84% 39%;
+    --expense: 10 80% 60%;
+    --warning: 38 92% 50%;
+    --info: 210 100% 60%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(160 84% 39%),
+      hsl(180 70% 35%)
+    );
+    --gradient-card: linear-gradient(
+      145deg,
+      hsl(220 20% 14%),
+      hsl(220 20% 11%)
+    );
+    --gradient-income: linear-gradient(
+      135deg,
+      hsl(160 84% 39%),
+      hsl(160 70% 30%)
+    );
+    --gradient-expense: linear-gradient(
+      135deg,
+      hsl(10 80% 60%),
+      hsl(0 72% 51%)
+    );
+
+    /* Shadows */
+    --shadow-card: 0 4px 20px -4px hsl(0 0% 0% / 0.4);
+    --shadow-glow: 0 0 40px -10px hsl(160 84% 39% / 0.3);
+
+    --sidebar-background: 220 20% 8%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 220 20% 10%;
+    --sidebar-accent: 220 20% 15%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 220 15% 15%;
+    --sidebar-ring: 160 84% 39%;
+  }
+
+  .dark {
+    /* En modo oscuro, los valores son los mismos por defecto */
+    --background: 220 20% 10%;
+    --foreground: 210 20% 95%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .card-glass {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-gradient {
+    background: var(--gradient-card);
+    @apply border border-border/30;
+    box-shadow: var(--shadow-card);
+  }
+
+  .text-income {
+    color: hsl(var(--income));
+  }
+
+  .text-expense {
+    color: hsl(var(--expense));
+  }
+
+  .bg-income {
+    background: var(--gradient-income);
+  }
+
+  .bg-expense {
+    background: var(--gradient-expense);
+  }
+
+  .glow-primary {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .stat-card {
+    background: var(--gradient-card);
+    @apply border border-border/30 rounded-xl p-5 transition-all duration-300 hover:scale-[1.02];
+    box-shadow: var(--shadow-card);
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground transition-all duration-200;
+  }
+
+  .nav-item:hover {
+    @apply bg-secondary text-foreground;
+  }
+
+  .nav-item.active {
+    @apply bg-primary/10 text-primary;
+  }
+
+  .progress-bar {
+    @apply h-2 rounded-full bg-secondary overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+    background: var(--gradient-primary);
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  .animate-pulse-soft {
+    animation: pulseSoft 2s ease-in-out infinite;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pulseSoft {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+}
