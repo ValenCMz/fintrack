@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
-import com.valencmz.fintrack.enums.TransactionType;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -15,45 +13,48 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 
 @Entity
-public class Transaction {
+public class FixedExpende {
     @Id
     @GeneratedValue(generator = "UUID", strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "type", nullable = false)
-    private TransactionType type;
-
-    @Column(name = "description", nullable = true)
-    private String description;
+    @Column(name = "name", nullable = false)
+    private String name;
 
     @Column(name = "amount", nullable = false)
     private BigDecimal amount;
 
-    @Column(name = "date", nullable = false)
-    private LocalDate date;
+    @Column(name = "dueDay", nullable = false)
+    private LocalDate dueDay;
 
-    @Column(name = "notes", nullable = true)
-    private String notes;
+    @Column(name = "frequency", nullable = true)
+    private String frequency;
+
+    @Column(name = "active", nullable = false)
+    private boolean active;
 
     // Relationships
     // category
-    // una transaccion puede tener una categoria, pero una categoria puede tener
-    // muchas transacciones.
-    @ManyToOne
+    // account
+
+    // un gasto fijo tiene una categoria, pero una categoria puede tener muchos
+    // gastos fijos.
     @JoinColumn(name = "category_id", nullable = false)
+    @ManyToOne
     private Category category;
 
     // account
-    // una transaccion puede tener una cuenta, pero una cuenta puede tener muchas
-    // transacciones.
-    @ManyToOne
+    // un gasto fijo tiene una cuenta, pero una cuenta puede tener muchos gastos
+    // fijos.
     @JoinColumn(name = "account_id", nullable = false)
+    @ManyToOne
     private Account account;
 
     // user
-    // a user can have many transactions, but a transaction can belong to only one
-    // user.
-    @ManyToOne
+    // a user can have many fixed expenses, but a fixed expense can belong to only
+    // one user.
     @JoinColumn(name = "user_id", nullable = false)
+    @ManyToOne
     private User user;
+
 }

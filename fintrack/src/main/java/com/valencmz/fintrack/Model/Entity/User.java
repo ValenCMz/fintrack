@@ -1,16 +1,17 @@
-package main.java.com.valencmz.fintrack.Model.Entity;
+package com.valencmz.fintrack.Model.Entity;
 
-import org.hibernate.annotations.GenericGenerator;
 import java.util.UUID;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 
 @Entity
 public class User {
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GeneratedValue(generator = "UUID", strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(name = "email", nullable = false, unique = true)
