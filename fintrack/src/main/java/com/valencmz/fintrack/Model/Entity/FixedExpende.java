@@ -1,4 +1,4 @@
-package com.valencmz.fintrack.Model.Entity;
+package com.valencmz.fintrack.model.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -11,8 +11,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class FixedExpende {
     @Id
     @GeneratedValue(generator = "UUID", strategy = GenerationType.UUID)
