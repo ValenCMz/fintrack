@@ -5,11 +5,12 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import com.valencmz.fintrack.enums.MonotributoStatus;
 import com.valencmz.fintrack.model.entity.Monotributo;
 
 public interface MonotributoRepository extends JpaRepository<Monotributo, UUID> {
 
     public List<Monotributo> findByUserId(UUID userId);
 
-    public List<Monotributo> findByUserIdAndActive(UUID userId, boolean active);
+    public List<Monotributo> findByUserIdAndStatus(UUID userId, MonotributoStatus status);
 }
