@@ -31,13 +31,14 @@ Request → Controller → Service → Result<T> → Controller → ApiResponse
 {
   "success": false,
   "error": {
-    "code": "USER_NOT_FOUND",
-    "message": "Usuario no encontrado",
     "status": 404,
-    "statusText": "Not Found"
+    "statusText": "Not Found",
+    "message": "Usuario no encontrado"
   }
 }
 ```
+
+El frontend puede decidir cómo actuar según el `status` HTTP (401 = login, 403 = sin permisos, 404 = no encontrado, etc.) y mostrar el `message` al usuario.
 
 ## Componentes
 
@@ -58,91 +59,72 @@ public class ApiResponse<T> {
 
 ### 2. `ErrorResponse` — Respuesta de Error
 
-Extiende `ApiResponse` con un objeto `ErrorDetail` que contiene el código de error, mensaje, status HTTP y su descripción.
+Extiende `ApiResponse` con un objeto `ErrorDetail` que contiene el status HTTP y su descripción.
 
 ```java
 public class ErrorResponse extends ApiResponse<Object> {
     private ErrorDetail error;
 
+    public ErrorResponse(String message, HttpStatus status) {
+        super(false, null, null);
+        this.error = new ErrorDetail(status.value(), status.getReasonPhrase(), message);
+    }
+
     @Getter @AllArgsConstructor
     public static class ErrorDetail {
-        private String code;      // Ej: "USER_NOT_FOUND"
-        private String message;   // Ej: "Usuario no encontrado"
         private int status;       // Ej: 404
         private String statusText;// Ej: "Not Found"
+        private String message;   // Ej: "Usuario no encontrado"
     }
 }
 ```
 
 ### 3. `Result<T>` — Pattern Result para Services
 
-Envuelve el resultado de una operación de service. Puede ser éxito (con datos) o fallo (con error).
+Envuelve el resultado de una operación de service. Puede ser éxito (con datos) o fallo (con mensaje).
 
 **Paquete:** `com.valencmz.fintrack.errors`
 
 ```java
-Result<UserDTO> result = usuarioService.getUser(id);
-if (result.isSuccess()) {
-    return ResponseEntity.ok(ApiResponse.success(result.getData()));
+@Getter
+public class Result<T> {
+    private final boolean success;
+    private final T data;
+    private final String errorMessage;
+
+    public static <T> Result<T> success(T data) { ... }
+    public static <T> Result<T> failure(String message) { ... }
 }
-return ResponseEntity.status(result.getErrorCode().getStatus())
-    .body(ApiResponse.error(result.getErrorCode(), result.getMessage()));
 ```
 
-**Métodos estáticos:**
+### 4. `CustomAppException` — Excepción de Negocio
 
-| Método | Descripción |
-|--------|-------------|
-| `Result.success(data)` | Crear resultado exitoso con datos |
-| `Result.failure(errorCode)` | Crear resultado fallido con código de error (usa mensaje default) |
-| `Result.failure(errorCode, message)` | Crear resultado fallido con mensaje personalizado |
+Excepción personalizada que lleva `HttpStatus`. Se lanza desde los services y es capturada por el `GlobalExceptionHandler`.
 
-### 4. `ErrorCode` — Enum de Códigos de Error
-
-Define los códigos de error de la aplicación con su mensaje por defecto y status HTTP asociado.
-
-**Paquete:** `com.valencmz.fintrack.enums`
-
-| Código | Mensaje Default | Status |
-|--------|----------------|--------|
-| `INVALID_CREDENTIALS` | Credenciales inválidas | 401 |
-| `EMAIL_ALREADY_EXISTS` | Ya existe un usuario con ese email | 400 |
-| `UNAUTHORIZED` | No autenticado | 401 |
-| `FORBIDDEN` | No tenés permisos | 403 |
-| `TOKEN_EXPIRED` | Token expirado | 401 |
-| `REFRESH_TOKEN_INVALID` | Refresh token inválido | 401 |
-| `USER_NOT_FOUND` | Usuario no encontrado | 404 |
-| `VALIDATION_ERROR` | Error de validación | 400 |
-| `INVALID_EMAIL_FORMAT` | Formato de email inválido | 400 |
-| `PASSWORD_TOO_SHORT` | La contraseña debe tener al menos 8 caracteres | 400 |
-| `NOT_FOUND` | Recurso no encontrado | 404 |
-| `INTERNAL_ERROR` | Error interno del servidor | 500 |
-
-### 5. `CustomAppException` — Excepción de Negocio
-
-Excepción personalizada que lleva `HttpStatus` + `ErrorCode`. Se lanza desde los services y es capturada por el `GlobalExceptionHandler`.
+**Paquete:** `com.valencmz.fintrack.errors`
 
 ```java
-throw new CustomAppException(
-    "Ya existe un usuario con ese email",
-    HttpStatus.BAD_REQUEST,
-    ErrorCode.EMAIL_ALREADY_EXISTS
-);
+public class CustomAppException extends RuntimeException {
+    private final HttpStatus httpStatus;
+
+    public CustomAppException(String message, HttpStatus httpStatus) { ... }
+    public HttpStatus getHttpStatus() { ... }
+}
 ```
 
-### 6. `GlobalExceptionHandler` — Manejador Centralizado
+### 5. `GlobalExceptionHandler` — Manejador Centralizado
 
 Captura excepciones y las convierte en `ErrorResponse` con el HTTP status correcto.
 
 **Paquete:** `com.valencmz.fintrack.config`
 
-| Excepción Manejada | ErrorCode | Status |
-|--------------------|-----------|--------|
-| `CustomAppException` | (el de la excepción) | (el de la excepción) |
-| `BadCredentialsException` | `INVALID_CREDENTIALS` | 401 |
-| `UsernameNotFoundException` | `USER_NOT_FOUND` | 404 |
-| `MethodArgumentNotValidException` | `VALIDATION_ERROR` | 400 |
-| `Exception` (fallback) | `INTERNAL_ERROR` | 500 |
+| Excepción Manejada | Status | Mensaje |
+|--------------------|--------|---------|
+| `CustomAppException` | (el de la excepción) | (mensaje de la excepción) |
+| `BadCredentialsException` | 401 Unauthorized | Credenciales inválidas |
+| `UsernameNotFoundException` | 404 Not Found | Usuario no encontrado |
+| `MethodArgumentNotValidException` | 400 Bad Request | Campo: mensaje de validación |
+| `Exception` (fallback) | 500 Internal Server Error | Mensaje de la excepción |
 
 ## Cómo Usar
 
@@ -153,7 +135,7 @@ Captura excepciones y las convierte en `ErrorResponse` con el HTTP status correc
 public Result<UserDTO> getUser(UUID id) {
     User user = userRepository.findById(id).orElse(null);
     if (user == null) {
-        return Result.failure(ErrorCode.USER_NOT_FOUND);
+        return Result.failure("Usuario no encontrado");
     }
     return Result.success(new UserDTO(user));
 }
@@ -163,11 +145,7 @@ public Result<UserDTO> getUser(UUID id) {
 ```java
 public void register(RegisterDTO dto) {
     if (userRepository.existsByEmail(dto.getEmail())) {
-        throw new CustomAppException(
-            "Ya existe un usuario con ese email",
-            HttpStatus.BAD_REQUEST,
-            ErrorCode.EMAIL_ALREADY_EXISTS
-        );
+        throw new CustomAppException("Ya existe un usuario con ese email", HttpStatus.BAD_REQUEST);
     }
     // ... guardar usuario
 }
@@ -182,9 +160,8 @@ public ResponseEntity<ApiResponse<UserDTO>> me(@AuthenticationPrincipal UserAuth
     if (result.isSuccess()) {
         return ResponseEntity.ok(ApiResponse.success(result.getData()));
     }
-    ErrorCode code = result.getErrorCode();
-    return ResponseEntity.status(code.getStatus())
-        .body(ApiResponse.error(code, result.getMessage()));
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(result.getErrorMessage()));
 }
 ```
 
@@ -201,50 +178,21 @@ public ResponseEntity<ApiResponse<RegisterReponseDTO>> register(
 }
 ```
 
-## Agregar Nuevos Códigos de Error
-
-1. Agregar el código al enum `ErrorCode`:
-
-```java
-// En enums/ErrorCode.java
-ACCOUNT_NOT_FOUND("Cuenta no encontrada", HttpStatus.NOT_FOUND),
-CARD_EXPIRED("Tarjeta vencida", HttpStatus.BAD_REQUEST),
-```
-
-2. Usarlo en un service:
-
-```java
-return Result.failure(ErrorCode.ACCOUNT_NOT_FOUND);
-// o con mensaje custom:
-return Result.failure(ErrorCode.CARD_EXPIRED, "La tarjeta Visa vence mañana");
-```
-
-3. O lanzar como excepción:
-
-```java
-throw new CustomAppException(
-    "Cuenta no encontrada",
-    HttpStatus.NOT_FOUND,
-    ErrorCode.ACCOUNT_NOT_FOUND
-);
-```
-
 ## Flujo Completo
 
 ```
-1. Client envía request a /api/users/invalid-id
-2. UserController llama a usuarioService.getUser(id)
-3. Service busca en BD → no encuentra usuario
-4. Service retorna Result.failure(ErrorCode.USER_NOT_FOUND)
+1. Client envía request GET /accounts/invalid-id
+2. AccountController llama a accountService.getAccount(id, user)
+3. Service busca en BD → no encuentra la cuenta
+4. Service retorna Result.failure("Cuenta no encontrada")
 5. Controller retorna ResponseEntity con ErrorResponse
 6. Respuesta HTTP 404:
    {
      "success": false,
      "error": {
-       "code": "USER_NOT_FOUND",
-       "message": "Usuario no encontrado",
        "status": 404,
-       "statusText": "Not Found"
+       "statusText": "Not Found",
+       "message": "Cuenta no encontrada"
      }
    }
 ```

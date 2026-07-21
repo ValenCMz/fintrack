@@ -1,39 +1,30 @@
 package com.valencmz.fintrack.errors;
 
-import com.valencmz.fintrack.enums.ErrorCode;
-
 import lombok.Getter;
 
 @Getter
 public class Result<T> {
     private final boolean success;
     private final T data;
-    private final ErrorCode errorCode;
-    private final String message;
+    private final String errorMessage;
 
     private Result(T data) {
         this.success = true;
         this.data = data;
-        this.errorCode = null;
-        this.message = null;
+        this.errorMessage = null;
     }
 
-    private Result(ErrorCode errorCode, String message) {
+    private Result(String errorMessage) {
         this.success = false;
         this.data = null;
-        this.errorCode = errorCode;
-        this.message = message;
+        this.errorMessage = errorMessage;
     }
 
     public static <T> Result<T> success(T data) {
         return new Result<>(data);
     }
 
-    public static <T> Result<T> failure(ErrorCode errorCode) {
-        return new Result<>(errorCode, errorCode.getDefaultMessage());
-    }
-
-    public static <T> Result<T> failure(ErrorCode errorCode, String message) {
-        return new Result<>(errorCode, message);
+    public static <T> Result<T> failure(String message) {
+        return new Result<>(message);
     }
 }

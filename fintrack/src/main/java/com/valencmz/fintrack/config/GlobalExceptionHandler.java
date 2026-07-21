@@ -7,9 +7,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import com.valencmz.fintrack.errors.CustomAppException;
 
-import com.valencmz.fintrack.enums.ErrorCode;
+import com.valencmz.fintrack.errors.CustomAppException;
 import com.valencmz.fintrack.errors.ErrorResponse;
 
 @RestControllerAdvice
@@ -17,17 +16,23 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CustomAppException.class)
     public ResponseEntity<ErrorResponse> handleCustom(CustomAppException ex) {
-        return buildResponse(ex.getErrorCode(), ex.getMessage(), ex.getHttpStatus());
+        HttpStatus status = ex.getHttpStatus();
+        ErrorResponse body = new ErrorResponse(ex.getMessage(), status);
+        return ResponseEntity.status(status).body(body);
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
-        return buildResponse(ErrorCode.INVALID_CREDENTIALS);
+    public ResponseEntity<ErrorResponse> handleBadCredentials() {
+        String message = "Credenciales inválidas";
+        ErrorResponse body = new ErrorResponse(message, HttpStatus.UNAUTHORIZED);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
     }
 
     @ExceptionHandler(UsernameNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleUserNotFound(UsernameNotFoundException ex) {
-        return buildResponse(ErrorCode.USER_NOT_FOUND);
+    public ResponseEntity<ErrorResponse> handleUserNotFound() {
+        String message = "Usuario no encontrado";
+        ErrorResponse body = new ErrorResponse(message, HttpStatus.NOT_FOUND);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -36,26 +41,13 @@ public class GlobalExceptionHandler {
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .reduce((a, b) -> a + "; " + b)
                 .orElse("Error de validación");
-        return buildResponse(ErrorCode.VALIDATION_ERROR, msg);
+        ErrorResponse body = new ErrorResponse(msg, HttpStatus.BAD_REQUEST);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
-        return buildResponse(ErrorCode.INTERNAL_ERROR, ex.getMessage());
-    }
-
-    private ResponseEntity<ErrorResponse> buildResponse(ErrorCode code) {
-        ErrorResponse body = new ErrorResponse(code, code.getDefaultMessage(), code.getStatus());
-        return ResponseEntity.status(code.getStatus()).body(body);
-    }
-
-    private ResponseEntity<ErrorResponse> buildResponse(ErrorCode code, String message) {
-        ErrorResponse body = new ErrorResponse(code, message, code.getStatus());
-        return ResponseEntity.status(code.getStatus()).body(body);
-    }
-
-    private ResponseEntity<ErrorResponse> buildResponse(ErrorCode code, String message, HttpStatus status) {
-        ErrorResponse body = new ErrorResponse(code, message, status);
-        return ResponseEntity.status(status).body(body);
+        ErrorResponse body = new ErrorResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }

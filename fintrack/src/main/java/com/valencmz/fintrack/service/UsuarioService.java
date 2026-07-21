@@ -1,7 +1,6 @@
 package com.valencmz.fintrack.service;
 
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -22,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.FileCopyUtils;
 
 import com.valencmz.fintrack.enums.Rol;
+import com.valencmz.fintrack.errors.CustomAppException;
 import com.valencmz.fintrack.model.dto.auth.ForgotPasswordDTO;
 import com.valencmz.fintrack.model.dto.auth.LoginDTO;
 import com.valencmz.fintrack.model.dto.auth.LoginResponseDTO;
@@ -108,12 +108,10 @@ public class UsuarioService {
     }
 
     private void validateRegister(RegisterDTOI dto) {
-        // 1. Formato de email (por si llega sin @Valid)
         if (!EMAIL_PATTERN.matcher(dto.getEmail()).matches()) {
             throw new CustomAppException("Formato de email inválido", HttpStatus.BAD_REQUEST);
         }
 
-        // 2. Unicidad
         if (this.userRepository.existsByEmail(dto.getEmail().toLowerCase())) {
             throw new CustomAppException("Ya existe un usuario con ese email", HttpStatus.BAD_REQUEST);
         }
@@ -132,32 +130,25 @@ public class UsuarioService {
     }
 
     public void forgotPassword(ForgotPasswordDTO forgotPasswordDTO) {
-        // 1. Validar email
         if (!EMAIL_PATTERN.matcher(forgotPasswordDTO.getEmail()).matches()) {
             throw new CustomAppException("Datos mal enviados", HttpStatus.BAD_REQUEST);
         }
 
-        // 2. Buscar usuario por email
         if (userRepository.findByEmail(forgotPasswordDTO.getEmail()) == null) {
             throw new CustomAppException("Error al recuperar contraseña: " + forgotPasswordDTO.getEmail(),
                     HttpStatus.BAD_REQUEST);
         }
 
-        // 3. Generar y enviar token de restablecimiento de contraseña
         String resetToken = jwtService.generateResetToken(forgotPasswordDTO.getEmail());
 
-        // 4. Guardar el token en la base de datos
         PasswordResetToken passwordResetToken = new PasswordResetToken(
                 resetToken,
                 forgotPasswordDTO.getEmail(),
-                System.currentTimeMillis() + 16 * 60 * 1000 // 16 minutos de validez
-        );
+                System.currentTimeMillis() + 16 * 60 * 1000);
         this.passwordResetTokenRepository.save(passwordResetToken);
 
-        // Envio de email
         String resetLink = frontendUrl + "/reset-password?token=" + resetToken;
 
-        // Carga la plantilla como recurso
         Resource tpl = new ClassPathResource("templates/password-reset-email.html");
         String template;
         try {
@@ -166,16 +157,13 @@ public class UsuarioService {
             throw new CustomAppException("Error al mandar mail, intente mas tarde", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        // Reemplaza el placeholder
         String html = template.replace("{{RESET_LINK}}", resetLink);
 
-        // 3. Envía el email
         emailService.sendHtmlEmailAsync(forgotPasswordDTO.getEmail(),
                 "Restablece tu contraseña en Sistema de Gestión de Salas", html);
     }
 
     public void resetPassword(ResetPasswordRequestDTO resetPasswordRequest) {
-        // 1. Validar el token
         PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(
                 resetPasswordRequest.getResetToken());
         if (passwordResetToken == null ||
@@ -186,7 +174,6 @@ public class UsuarioService {
             throw new CustomAppException("Error en la validacion", HttpStatus.BAD_REQUEST);
         }
 
-        // 2. Buscar usuario por email
         User usuario = userRepository.findByEmail(passwordResetToken.getEmail());
         if (usuario == null) {
             throw new CustomAppException("Error al resetear contraseña", HttpStatus.BAD_REQUEST);
@@ -194,31 +181,26 @@ public class UsuarioService {
 
         validatePassword(resetPasswordRequest.getNewPassword());
 
-        // Revocar todos los tokens de refresco del usuario
-        // Esto asegura que el usuario no pueda seguir usando tokens antiguos
         jwtService.revokeAllRefreshTokensForUser(usuario);
 
-        // 3. Actualizar la contraseña
         usuario.setPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
         userRepository.save(usuario);
 
-        // 4. Marcar el token como usado
         passwordResetToken.setUsed(true);
         passwordResetTokenRepository.save(passwordResetToken);
     }
 
     private void validatePassword(String password) {
         if (password == null || password.isEmpty()) {
-            throw new CustomAppException("Malas credenciales, la contraseña es requerida", HttpStatus.BAD_REQUEST);
+            throw new CustomAppException("La contraseña es requerida", HttpStatus.BAD_REQUEST);
         }
         if (password.length() < 8) {
-            throw new CustomAppException("Malas credenciales, la contraseña debe tener al menos 8 caracteres",
+            throw new CustomAppException("La contraseña debe tener al menos 8 caracteres",
                     HttpStatus.BAD_REQUEST);
         }
-        // Validar al menos una letra mayúscula o un número
         if (!password.matches(".*[A-Z].*") && !password.matches(".*[0-9].*")) {
             throw new CustomAppException(
-                    "Malas credenciales, la contraseña debe tener al menos una letra mayúscula o un número",
+                    "La contraseña debe tener al menos una letra mayúscula o un número",
                     HttpStatus.BAD_REQUEST);
         }
     }
