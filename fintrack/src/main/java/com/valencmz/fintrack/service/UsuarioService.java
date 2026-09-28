@@ -93,6 +93,7 @@ public class UsuarioService {
     @Transactional
     public RegisterReponseDTO register(RegisterDTO registerDTO) {
         validateRegister(registerDTO);
+        validatePassword(registerDTO.getPassword());
         try {
             userRepository.save(
                     new User(
@@ -135,8 +136,8 @@ public class UsuarioService {
         }
 
         if (userRepository.findByEmail(forgotPasswordDTO.getEmail()) == null) {
-            throw new CustomAppException("Error al recuperar contraseña: " + forgotPasswordDTO.getEmail(),
-                    HttpStatus.BAD_REQUEST);
+            // No revelamos si el email existe: respondemos igual y no mandamos nada
+            return;
         }
 
         String resetToken = jwtService.generateResetToken(forgotPasswordDTO.getEmail());
@@ -206,9 +207,17 @@ public class UsuarioService {
     }
 
     @Transactional
-    public void updateUser(UUID id, UsuarioUpdateDTO usuarioDTO) {
+    public void updateUser(UUID id, UsuarioUpdateDTO usuarioDTO, UserAuth caller) {
         if (id == null)
             throw new CustomAppException("El id es requerido", HttpStatus.BAD_REQUEST);
+
+        boolean isAdmin = caller.getUser().getRol() == Rol.ADMIN;
+
+        if (!isAdmin && !caller.getUser().getId().equals(id))
+            throw new CustomAppException("No podes modificar a otro usuario", HttpStatus.FORBIDDEN);
+
+        if (usuarioDTO.getRol() != null && !isAdmin)
+            throw new CustomAppException("Solo un administrador puede cambiar el rol", HttpStatus.FORBIDDEN);
 
         User usuario = userRepository.searchById(id)
                 .orElseThrow(() -> new CustomAppException("Usuario no encontrado", HttpStatus.NOT_FOUND));
@@ -218,12 +227,18 @@ public class UsuarioService {
         }
 
         if (usuarioDTO.getEmail() != null) {
+            if (!EMAIL_PATTERN.matcher(usuarioDTO.getEmail()).matches())
+                throw new CustomAppException("Formato de email inválido", HttpStatus.BAD_REQUEST);
+            if (!usuarioDTO.getEmail().equalsIgnoreCase(usuario.getEmail())
+                    && userRepository.existsByEmail(usuarioDTO.getEmail().toLowerCase()))
+                throw new CustomAppException("Ya existe un usuario con ese email", HttpStatus.BAD_REQUEST);
             usuario.setEmail(usuarioDTO.getEmail());
         }
-        if (usuarioDTO.getRol() != null) {
+
+        if (isAdmin && usuarioDTO.getRol() != null) {
             usuario.setRol(usuarioDTO.getRol());
         }
 
-        User saved = userRepository.save(usuario);
+        userRepository.save(usuario);
     }
 }

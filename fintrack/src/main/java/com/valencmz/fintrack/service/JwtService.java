@@ -32,6 +32,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 
@@ -41,8 +42,13 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secretKey;
 
+    @Value("${jwt.expiration:3600000}")
+    private long accessTokenExpirationMs;
+
     @Value("${app.cookie.secure:false}")
     private boolean cookieSecure;
+
+    private SecretKey signingKey;
 
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
@@ -121,7 +127,7 @@ public class JwtService {
                 .add(claims)
                 .subject(email)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 60000 * 60 * 1)) // 1 hora de expiración
+                .expiration(new Date(System.currentTimeMillis() + accessTokenExpirationMs))
                 .and()
                 .signWith(getKey())
                 .compact();
@@ -164,8 +170,24 @@ public class JwtService {
     }
 
     private SecretKey getKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(this.secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
+        return signingKey;
+    }
+
+    @PostConstruct
+    private void initSigningKey() {
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(this.secretKey);
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("jwt.secret no es un Base64 valido", e);
+        }
+
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("jwt.secret debe tener al menos 32 bytes (256 bits) para HS256, tiene "
+                    + keyBytes.length);
+        }
+
+        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
     public void revokeRefreshToken(RefreshToken refreshToken) {

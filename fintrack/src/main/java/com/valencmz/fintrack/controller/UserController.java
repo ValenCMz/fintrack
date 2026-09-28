@@ -44,8 +44,9 @@ public class UserController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> update(@PathVariable UUID id,
-            @RequestBody UsuarioUpdateDTO dto) {
-        usuarioService.updateUser(id, dto);
+            @RequestBody UsuarioUpdateDTO dto,
+            @AuthenticationPrincipal UserAuth userAuth) {
+        usuarioService.updateUser(id, dto, userAuth);
         return ResponseEntity.ok(ApiResponse.success("Usuario actualizado"));
     }
 

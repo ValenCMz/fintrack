@@ -17,6 +17,7 @@ import com.valencmz.fintrack.service.JwtService;
 import com.valencmz.fintrack.service.UsuarioService;
 
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/auth")
@@ -29,12 +30,13 @@ public class AuthController {
     private UsuarioService usuarioService;
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<?>> login(@RequestBody LoginDTO loginDTO, HttpServletResponse response) {
+    public ResponseEntity<ApiResponse<?>> login(@Valid @RequestBody LoginDTO loginDTO,
+            HttpServletResponse response) {
         return ResponseEntity.ok(ApiResponse.success(this.usuarioService.login(loginDTO, response)));
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<?>> register(@RequestBody RegisterDTO registerDTO) {
+    public ResponseEntity<ApiResponse<?>> register(@Valid @RequestBody RegisterDTO registerDTO) {
         return ResponseEntity.ok(ApiResponse.success(this.usuarioService.register(registerDTO)));
     }
 
