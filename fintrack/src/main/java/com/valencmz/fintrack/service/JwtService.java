@@ -41,6 +41,9 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secretKey;
 
+    @Value("${app.cookie.secure:false}")
+    private boolean cookieSecure;
+
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
@@ -101,10 +104,10 @@ public class JwtService {
 
         ResponseCookie cookie = ResponseCookie.from("refreshTokenFinTrack", rawToken)
                 .httpOnly(true)
-                .secure(true)
-                .path("/auth/refreshToken")
+                .secure(cookieSecure)
+                .path("/api/auth/refreshToken")
                 .maxAge(Duration.ofDays(30))
-                .sameSite("None")
+                .sameSite(cookieSecure ? "None" : "Lax")
                 .build();
 
         response.addHeader("Set-Cookie", cookie.toString());

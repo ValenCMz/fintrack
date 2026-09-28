@@ -1,6 +1,7 @@
 package com.valencmz.fintrack.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,4 +14,6 @@ public interface MonotributoRepository extends JpaRepository<Monotributo, UUID> 
     public List<Monotributo> findByUserId(UUID userId);
 
     public List<Monotributo> findByUserIdAndStatus(UUID userId, MonotributoStatus status);
+
+    public Optional<Monotributo> findByIdAndUserId(UUID id, UUID userId);
 }

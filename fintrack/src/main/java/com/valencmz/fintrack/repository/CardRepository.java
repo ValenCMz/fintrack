@@ -1,6 +1,7 @@
 package com.valencmz.fintrack.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,5 +13,7 @@ public interface CardRepository extends JpaRepository<Card, UUID> {
     public List<Card> findByUserId(UUID userId);
 
     public List<Card> findByUserIdAndActive(UUID userId, boolean active);
+
+    public Optional<Card> findByIdAndUserId(UUID id, UUID userId);
 
 }

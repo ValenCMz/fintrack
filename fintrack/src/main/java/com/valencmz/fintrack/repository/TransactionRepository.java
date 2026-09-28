@@ -2,6 +2,7 @@ package com.valencmz.fintrack.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,8 +14,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     public List<Transaction> findByUserId(UUID userId);
 
+    public List<Transaction> findByUserIdOrderByDateDesc(UUID userId);
+
     public List<Transaction> findByUserIdAndType(UUID userId, TransactionType type);
 
     public List<Transaction> findByUserIdAndDateBetween(UUID userId, LocalDate from, LocalDate to);
+
+    public Optional<Transaction> findByIdAndUserId(UUID id, UUID userId);
 
 }
