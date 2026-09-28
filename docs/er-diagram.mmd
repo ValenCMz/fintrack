@@ -1,0 +1,151 @@
+erDiagram
+    %% --- Relaciones (implementadas) ---
+    users ||--o{ account : "tiene"
+    users ||--o{ category : "tiene"
+    users ||--o{ transaction : "registra"
+    users ||--o{ fixed_expende : "tiene"
+    users ||--o{ card : "tiene"
+    users ||--o{ debt : "tiene"
+    users ||--o{ saving_goal : "tiene"
+    users ||--o{ monotributo : "tiene"
+    users ||--o{ refresh_token : "posee"
+    category ||--o{ transaction : "clasifica"
+    account ||--o{ transaction : "origen"
+    category ||--o{ fixed_expende : "clasifica"
+    account ||--o{ fixed_expende : "origen"
+
+    %% --- Relaciones (planificadas - gastos compartidos) ---
+    users ||--o{ shared_expense : "registra"
+    users ||--o{ group : "tiene"
+    users ||--o{ settlement : "registra"
+    group ||--o{ shared_expense : "agrupa"
+    category |o--o{ shared_expense : "categoriza"
+    account |o--o{ shared_expense : "paga desde"
+    shared_expense ||--o{ share_participant : "incluye"
+    shared_expense ||--o{ settlement : "liquidada por"
+
+    users {
+        UUID id PK
+        string email UK
+        string username UK
+        string password
+        enum rol
+    }
+    account {
+        UUID id PK
+        string name
+        enum type
+        string owner
+        boolean active
+        UUID user_id FK
+    }
+    category {
+        UUID id PK
+        string name
+        string color
+        enum type
+        boolean active
+        UUID user_id FK
+    }
+    transaction {
+        UUID id PK
+        enum type
+        string description
+        decimal amount
+        date date
+        string notes
+        UUID category_id FK
+        UUID account_id FK
+        UUID user_id FK
+    }
+    fixed_expende {
+        UUID id PK
+        string name
+        decimal amount
+        date due_day
+        string frequency
+        boolean active
+        UUID category_id FK
+        UUID account_id FK
+        UUID user_id FK
+    }
+    card {
+        UUID id PK
+        string holder_name
+        date due_day
+        decimal amount
+        boolean active
+        UUID user_id FK
+    }
+    debt {
+        UUID id PK
+        string creditor
+        decimal total_amount
+        decimal remaining_amount
+        date start_date
+        enum status
+        UUID user_id FK
+    }
+    saving_goal {
+        UUID id PK
+        string name
+        decimal target_amount
+        decimal current_amount
+        date target_date
+        boolean active
+        UUID user_id FK
+    }
+    monotributo {
+        UUID id PK
+        string name
+        decimal monthly_amount
+        date due_day
+        enum status
+        UUID user_id FK
+    }
+    refresh_token {
+        bigint id PK
+        string hashed_token UK
+        boolean revoked
+        datetime fecha_expiracion
+        UUID usuario_id FK
+    }
+    password_reset_token {
+        string token PK
+        string email
+        bigint expiration_time
+        boolean used
+    }
+    shared_expense {
+        UUID id PK
+        string description
+        decimal total_amount
+        date date
+        string paid_by
+        enum split_method
+        UUID category_id FK
+        UUID account_id FK
+        UUID group_id FK
+        UUID user_id FK
+    }
+    share_participant {
+        UUID id PK
+        string name
+        decimal amount
+        decimal percentage
+        UUID shared_expense_id FK
+    }
+    settlement {
+        UUID id PK
+        string from_name
+        string to_name
+        decimal amount
+        date date
+        UUID shared_expense_id FK
+        UUID user_id FK
+    }
+    group {
+        UUID id PK
+        string name
+        UUID user_id FK
+    }

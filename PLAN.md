@@ -1,11 +1,36 @@
 # Fintrack — Plan de Implementación
 
+## MVP vs Post-MVP
+
+```
+┌─ MVP ─────────────────────────────────────────────┐
+│ Fase 1: Backend REST API (Java / Spring Boot)     │
+│ Fase 2: Frontend Web App (Next.js / React)        │
+│ Fase 3: MCP Server + Telegram Bot + NLP           │
+└────────────────────────────────────────────────────┘
+┌─ Post-MVP ─────────────────────────────────────────┐
+│ Fase 4: IA Local (Ollama) — opcional              │
+│ Fase 5: Infraestructura y DevOps                  │
+└────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Arquitectura General
 
 ```
-PostgreSQL ← Java Spring Boot (REST API) ←┬─ Next.js Frontend (Web App)
-                                           └─ Node.js MCP Server ←┬─ Telegram Bot
-                                                                   └─ Ollama (IA Local)
+                              ┌─────────────┐
+                              │  API IA     │
+                              │  (Gemini /  │
+                              │  DeepSeek)  │
+                              └──────┬──────┘
+                                     │ NLP (procesamiento de mensajes)
+PostgreSQL ← Java Spring Boot ←┬─┐   │
+  (REST API)                   │ ├───┘
+                               │ │
+                               │ └─ Node.js MCP Server ←── Telegram Bot
+                               │
+                               └─── Next.js Frontend (Web App)
 ```
 
 ---
@@ -73,6 +98,47 @@ Exponer endpoints RESTful:
 - Manejo global de excepciones con `@ControllerAdvice`
 - Respuestas de error estandarizadas
 
+### 1.8 Gastos Compartidos
+Entidades nuevas para gestionar gastos entre personas (pareja, convivencia, salidas con amigos):
+- `SharedExpense` — gasto compartido: quién pagó, monto total, categoría, fecha, descripción
+- `ShareParticipant` — cada persona que participa del gasto (nombre/alias) y cuánto le corresponde
+- `Group` — grupo de personas (opcional para MVP, ej: "Casa", "Viaje a la costa")
+
+Modelo de división:
+- **50/50**: monto total dividido en partes iguales entre los N participantes
+- **Porcentaje**: cada participante asume un % del total (ej: 60/40 en convivencia)
+- **Monto fijo**: a cada participante se le asigna un monto específico (ej: uno pagó entrada $5000, otro pagó comida $3000, etc.)
+
+Funcionalidades:
+- **Crear gasto compartido**: definir participantes, quién pagó, cómo se divide
+- **Registrar pago/liquidación**: cuando un participante le paga al que adelantó
+- **Balance entre personas**: calcular quién le debe a quién y cuánto (net balance)
+- **Historial de gastos compartidos**: filtros por grupo, persona, fecha
+- **Vincular a cuentas/categorías**: un gasto compartido genera una transacción real en la cuenta del pagador
+
+Repositorios:
+- `SharedExpenseRepository`
+- `ShareParticipantRepository`
+- `SettlementRepository` (pagos de liquidación entre participantes)
+
+DTOs:
+- `SharedExpenseRequest`, `SharedExpenseResponse`
+- `ShareParticipantDto`
+- `SettlementRequest`
+- `BalanceResponse` (resumen de deudas: quién debe a quién)
+
+Servicios:
+- `SharedExpenseService` — CRUD + cálculo de balances + liquidaciones
+
+Endpoints REST:
+
+| Recurso | Endpoints |
+|---------|-----------|
+| Shared Expenses | `GET/POST /api/shared-expenses`, `GET/PUT/DELETE /api/shared-expenses/{id}` |
+| Balances | `GET /api/shared-expenses/balances` — saldos entre personas |
+| Settlements | `POST /api/shared-expenses/{id}/settle` — registrar pago de deuda |
+| Groups | `GET/POST /api/groups`, `GET /api/groups/{id}/expenses` (opcional MVP) |
+
 ---
 
 ## Fase 2: Conectar Frontend al Backend (Next.js / React)
@@ -112,9 +178,21 @@ Exponer endpoints RESTful:
 - Zustand o React Context para estado global (usuario, cuentas, categorías)
 - React Query (TanStack Query) para caché y sincronización de datos del servidor
 
+### 2.7 Gastos Compartidos
+- **Página** (`/gastos-compartidos`): listado de gastos compartidos con filtros
+- **Formulario de nuevo gasto**: seleccionar quién pagó, participantes (multi-select o input libre de nombres), monto, cómo se divide (50/50, %, fijo), categoría, descripción, fecha
+- **Vista de balances**: pantalla que muestra deudas netas entre personas (estilo "Vos le debés $X a María", "Juan te debe $Y")
+- **Liquidación**: botón "Marcar como pagado" cuando alguien salda una deuda
+- **Widget en Dashboard**: resumen rápido de balances pendientes
+- **Componentes**:
+  - `SharedExpenseCard` — tarjeta de gasto compartido
+  - `BalanceSummary` — resumen visual de deudas
+  - `ParticipantSelector` — selector de participantes
+  - `SplitMethodSelector` — toggle entre 50/50, porcentaje, monto fijo
+
 ---
 
-## Fase 3: MCP Server + Telegram Bot (Node.js / TypeScript)
+## Fase 3: MCP Server + Telegram Bot + NLP (Node.js / TypeScript)
 
 ### 3.1 Proyecto MCP Server
 - Nuevo proyecto en `fintrack-mcp/`
@@ -150,42 +228,69 @@ Exponer endpoints RESTful:
   - `/vencimientos` — próximos pagos
   - `/metas` — metas de ahorro
   - `/help` — ayuda y lista de comandos
-- Procesamiento de lenguaje natural simple para mensajes sin comando (ej: "Gasté 5000 en supermercado")
 
-### 3.4 Autenticación del Bot
+### 3.4 NLP con API Externa (Gemini Flash / DeepSeek)
+- Procesamiento de lenguaje natural para mensajes sin comando (ej: "Gasté 5000 en supermercado") y consultas conversacionales
+- Usar API externa de IA para interpretar intención y extraer parámetros:
+  - **Gemini Flash**: tier gratuito generoso (~1500 req/día), excelente en español
+  - **DeepSeek**: ~0.14 USD / 1M tokens input, extremadamente barato, calidad sólida
+- Flujo: mensaje del usuario → API IA interpreta intención → MCP ejecuta tool → respuesta formateada
+- Funcionalidades NLP en el bot:
+  - Registrar transacciones en lenguaje natural ("Pagué 2000 de luz", "Cobré 50000 del laburo")
+  - Consultas conversacionales ("¿Cuánto gasté este mes en comida?", "¿Cómo voy con el ahorro?")
+  - Consejos financieros y análisis de patrones de gasto
+  - Resúmenes y reportes en lenguaje natural
+- El costo mensual para uso personal/familiar es despreciable (centavos de dólar)
+
+### 3.5 Chat en Frontend (`/chat`)
+- Conectar la página `/chat` al endpoint de NLP del MCP server
+- El chat envía el historial de transacciones y metas como contexto
+- Soporte para streaming de respuestas (Server-Sent Events)
+- Mismas capacidades NLP que el bot de Telegram
+
+### 3.6 Autenticación del Bot
 - Vincular cuenta de Telegram con usuario de la app (web o vía bot)
 - Almacenar mapping `chatId → userId`
 
----
+### 3.7 Gastos Compartidos vía MCP y Telegram
+Herramientas MCP adicionales para gastos compartidos:
 
-## Fase 4: Chatbot con IA (Ollama)
+| Tool | Descripción |
+|------|-------------|
+| `add_shared_expense` | Registrar un gasto compartido entre personas |
+| `list_shared_expenses` | Listar gastos compartidos con filtros |
+| `get_balances` | Ver quién le debe a quién y cuánto |
+| `settle_up` | Registrar pago de liquidación entre personas |
 
-### 4.1 Integración con Ollama
-- Instalar y configurar Ollama localmente
-- Elegir modelo (ej: `llama3.2`, `mistral`, `qwen2.5`)
-- Exponer endpoint en el MCP server para consultas al LLM
+Comandos del bot de Telegram:
+- `/compartir <monto> <descripción> con <personas>` — registrar gasto compartido
+- `/saldo` — ver balances pendientes (quién te debe / a quién le debés)
+- `/liquidar <persona> <monto>` — registrar que pagaste una deuda
 
-### 4.2 Chat en Frontend
-- Conectar la página `/chat` al endpoint de IA del MCP server
-- El chat envía el historial de transacciones y metas como contexto
-- Soporte para streaming de respuestas (Server-Sent Events)
-
-### 4.3 Funcionalidades del Chat IA
-- Consejos financieros personalizados basados en gastos del usuario
-- Análisis de patrones de gasto
-- Sugerencias de ahorro
-- Explicación de conceptos financieros/inversiones
-- Procesar lenguaje natural para crear transacciones ("Registrá un gasto de 2000 en comida")
-- Generar reportes mensuales en lenguaje natural
-
-### 4.4 Mejoras Futuras (Opcional)
-- RAG con PDFs de extractos bancarios
-- Integración con APIs de cotización (dólar, crypto)
-- Recomendaciones de inversión simples
+NLP para gastos compartidos:
+- "Pagué la cena de anoche, $12000 entre Juan, María y yo"
+- "Dividimos el alquiler $80000, yo pagué 60% y Ana 40%"
+- "¿Cuánto me debe Juan?"
+- "Le pagué $5000 a María por lo del finde"
 
 ---
 
-## Fase 5: Infraestructura y DevOps (Futuro)
+## Fase 4: IA Local (Ollama) — Post-MVP, Opcional
+
+- Migrar el pipeline de NLP de API externa a Ollama local
+- Relevante si el proyecto escala y el costo de API externa deja de ser trivial
+- Elegir modelo (ej: `llama3.2`, `qwen2.5`)
+- El MCP server expone el mismo endpoint de NLP, solo cambia el provider
+- Ventajas: sin dependencia de terceros, sin costo por request
+- Desventajas: requiere GPU o servidor con buena RAM, latencia mayor en CPU
+- Mejoras adicionales opcionales:
+  - RAG con PDFs de extractos bancarios
+  - Integración con APIs de cotización (dólar, crypto)
+  - Recomendaciones de inversión simples
+
+---
+
+## Fase 5: Infraestructura y DevOps — Post-MVP
 
 - Dockerizar todos los servicios (docker-compose.yml)
 - Variables de entorno (.env) para todas las credenciales
@@ -204,7 +309,8 @@ Exponer endpoints RESTful:
 | Frontend Web | Next.js 16, React 19, TypeScript 5, Tailwind CSS v4, shadcn/ui |
 | MCP Server | Node.js, TypeScript, @modelcontextprotocol/sdk |
 | Bot Telegram | grammY |
-| IA Local | Ollama |
+| NLP (MVP) | Gemini Flash o DeepSeek (API externa) |
+| NLP (Post-MVP) | Ollama (local) |
 | Build Backend | Maven |
 | Build Frontend | npm |
 | ORM | Hibernate (backend) |
