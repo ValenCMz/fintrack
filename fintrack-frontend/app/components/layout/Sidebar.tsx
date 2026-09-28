@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/app/context/AuthContext";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -29,6 +31,7 @@ const navItems = [
 
 const Sidebar = () => {
   const pathname = usePathname();
+  const { logout } = useAuth();
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
@@ -71,6 +74,13 @@ const Sidebar = () => {
           <Settings className="w-5 h-5" />
           <span className="font-medium">Configuración</span>
         </Link>
+        <button
+          onClick={logout}
+          className="nav-item w-full text-left hover:text-expense"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-medium">Cerrar sesión</span>
+        </button>
       </div>
     </aside>
   );

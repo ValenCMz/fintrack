@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import MainLayout from "@/app/components/layout/MainLayout";
 import StatCard from "@/app/components/dashboard/StatCard";
 import TransactionItem from "@/app/components/dashboard/TransactionItem";
@@ -5,152 +8,154 @@ import SavingGoalCard from "@/app/components/dashboard/SavingGoalCard";
 import QuickActions from "@/app/components/dashboard/QuickActions";
 import UpcomingPayments from "@/app/components/dashboard/UpcomingPayments";
 import { Wallet, TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
+import {
+  api,
+  Transaction,
+  SavingGoal,
+  MonthlySummary,
+  AccountBalance,
+} from "@/lib/api";
+import { formatMoney } from "@/lib/format";
+import { useAuth } from "@/app/context/AuthContext";
 
-const mockTransactions = [
-  {
-    type: "income" as const,
-    description: "Pago freelance",
-    category: "Trabajo",
-    amount: 150000,
-    date: "Hoy",
-    account: "MercadoPago",
-  },
-  {
-    type: "expense" as const,
-    description: "Supermercado",
-    category: "Alimentación",
-    amount: 25000,
-    date: "Ayer",
-    account: "Efectivo",
-  },
-  {
-    type: "expense" as const,
-    description: "Uber",
-    category: "Transporte",
-    amount: 3500,
-    date: "Ayer",
-    account: "MercadoPago",
-  },
-  {
-    type: "income" as const,
-    description: "Venta online",
-    category: "Ventas",
-    amount: 45000,
-    date: "3 Ene",
-    account: "Banco",
-  },
-  {
-    type: "expense" as const,
-    description: "Farmacia",
-    category: "Salud",
-    amount: 8500,
-    date: "2 Ene",
-    account: "Efectivo",
-  },
-];
+export default function Index() {
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [savingGoals, setSavingGoals] = useState<SavingGoal[]>([]);
+  const [summary, setSummary] = useState<MonthlySummary | null>(null);
+  const [balances, setBalances] = useState<AccountBalance[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const mockSavingGoals = [
-  {
-    name: "Fondo de emergencia",
-    currentAmount: 250000,
-    targetAmount: 500000,
-    targetDate: "Jun 2026",
-  },
-  {
-    name: "Vacaciones",
-    currentAmount: 80000,
-    targetAmount: 300000,
-    targetDate: "Dic 2026",
-  },
-];
+  useEffect(() => {
+    (async () => {
+      try {
+        const now = new Date();
+        const [tx, goals, sum, bal] = await Promise.all([
+          api.listTransactions(),
+          api.listSavingGoals(),
+          api.monthlySummary(now.getFullYear(), now.getMonth() + 1),
+          api.balance(),
+        ]);
+        setTransactions(tx);
+        setSavingGoals(goals.filter((g) => g.active));
+        setSummary(sum);
+        setBalances(bal);
+      } catch {
+        // los errores de auth ya redirigen; los demás se ignoran en el dashboard
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-const Index = () => {
+  const totalBalance = balances.reduce((s, b) => s + Number(b.balance), 0);
+  const totalSaved = savingGoals.reduce((s, g) => s + Number(g.currentAmount), 0);
+  const recent = transactions.slice(0, 5);
+
+  const monthLabel = new Date().toLocaleDateString("es-AR", {
+    month: "long",
+    year: "numeric",
+  });
+
   return (
     <MainLayout>
-      {/* Header */}
       <div className="mb-8 animate-fade-in">
         <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-          Bienvenido de vuelta 👋
+          Hola, {user?.username ?? "usuario"} 👋
         </h1>
         <p className="text-muted-foreground">
-          Aquí está el resumen de tus finanzas de Enero 2026
+          Este es el resumen de tus finanzas de {monthLabel}
         </p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         <StatCard
           title="Balance Total"
-          value="$485,000"
+          value={formatMoney(totalBalance)}
           subtitle="Todas las cuentas"
           icon={Wallet}
-          trend={{ value: "12%", positive: true }}
         />
         <StatCard
           title="Ingresos del Mes"
-          value="$320,000"
-          subtitle="4 transacciones"
+          value={formatMoney(summary?.totalIncome)}
+          subtitle="Este mes"
           icon={TrendingUp}
           variant="income"
-          trend={{ value: "8%", positive: true }}
         />
         <StatCard
           title="Gastos del Mes"
-          value="$145,000"
-          subtitle="12 transacciones"
+          value={formatMoney(summary?.totalExpense)}
+          subtitle="Este mes"
           icon={TrendingDown}
           variant="expense"
-          trend={{ value: "5%", positive: false }}
         />
         <StatCard
           title="Ahorros Totales"
-          value="$330,000"
-          subtitle="2 metas activas"
+          value={formatMoney(totalSaved)}
+          subtitle={`${savingGoals.length} metas activas`}
           icon={PiggyBank}
-          trend={{ value: "15%", positive: true }}
         />
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Transactions - Takes 2 columns */}
         <div className="lg:col-span-2 card-gradient rounded-xl p-5 animate-slide-up">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-display font-semibold text-lg">
               Transacciones Recientes
             </h3>
-            <button className="text-sm text-primary hover:underline">
-              Ver todas
-            </button>
           </div>
 
-          <div className="space-y-3">
-            {mockTransactions.map((transaction, index) => (
-              <TransactionItem key={index} {...transaction} />
-            ))}
-          </div>
+          {loading ? (
+            <p className="text-muted-foreground text-sm">Cargando...</p>
+          ) : recent.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              Todavía no hay transacciones.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {recent.map((t) => (
+                <TransactionItem
+                  key={t.id}
+                  type={t.type === "INCOME" ? "income" : "expense"}
+                  description={t.description}
+                  category={t.categoryName ?? "Sin categoría"}
+                  amount={Number(t.amount)}
+                  date={t.date}
+                  account={t.accountName ?? "—"}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Right Column */}
         <div className="space-y-6">
           <QuickActions />
           <UpcomingPayments />
         </div>
       </div>
 
-      {/* Saving Goals */}
       <div className="mt-8">
         <h3 className="font-display font-semibold text-xl mb-4">
           Metas de Ahorro
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {mockSavingGoals.map((goal, index) => (
-            <SavingGoalCard key={index} {...goal} />
-          ))}
-        </div>
+        {savingGoals.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No tenés metas de ahorro activas.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {savingGoals.map((goal) => (
+              <SavingGoalCard
+                key={goal.id}
+                name={goal.name}
+                currentAmount={Number(goal.currentAmount)}
+                targetAmount={Number(goal.targetAmount)}
+                targetDate={goal.targetDate}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </MainLayout>
   );
-};
-
-export default Index;
+}
