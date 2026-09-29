@@ -205,6 +205,13 @@ export interface AccountBalance {
   balance: number;
 }
 
+export interface Projection {
+  month: string;
+  estimatedIncome: number;
+  estimatedExpense: number;
+  estimatedNet: number;
+}
+
 export interface AccountRequest {
   name: string;
   type: AccountType;
@@ -355,4 +362,5 @@ export const api = {
     return get<CategoryExpense[]>(`/reports/by-category${qs ? `?${qs}` : ""}`);
   },
   balance: () => get<AccountBalance[]>("/reports/balance"),
+  projections: (months = 3) => get<Projection[]>(`/reports/projections?months=${months}`),
 };

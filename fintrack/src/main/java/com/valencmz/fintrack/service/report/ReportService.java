@@ -1,6 +1,7 @@
 package com.valencmz.fintrack.service.report;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import com.valencmz.fintrack.enums.TransactionType;
 import com.valencmz.fintrack.model.dto.report.AccountBalanceResponse;
 import com.valencmz.fintrack.model.dto.report.CategoryExpenseResponse;
 import com.valencmz.fintrack.model.dto.report.MonthlySummaryResponse;
+import com.valencmz.fintrack.model.dto.report.ProjectionResponse;
 import com.valencmz.fintrack.model.entity.Account;
 import com.valencmz.fintrack.model.entity.Transaction;
 import com.valencmz.fintrack.model.entity.auth.UserAuth;
@@ -24,6 +26,8 @@ import com.valencmz.fintrack.repository.TransactionRepository;
 
 @Service
 public class ReportService {
+
+    private static final int HISTORY_MONTHS = 3;
 
     @Autowired
     private TransactionRepository transactionRepository;
@@ -93,6 +97,47 @@ public class ReportService {
 
         List<AccountBalanceResponse> result = new ArrayList<>();
         balances.forEach((id, b) -> result.add(new AccountBalanceResponse(id, names.get(id), b)));
+        return result;
+    }
+
+    /**
+     * Proyecta los proximos meses usando el promedio de ingresos y egresos de
+     * los ultimos meses cerrados. No incluye gastos fijos: su frecuencia es un
+     * String libre y no se puede normalizar a mensual de forma confiable. El
+     * promedio historico ya los arrastra porque son transacciones.
+     */
+    public List<ProjectionResponse> projections(UserAuth userAuth, int months) {
+        YearMonth thisMonth = YearMonth.now();
+        YearMonth firstMonth = thisMonth.minusMonths(HISTORY_MONTHS);
+
+        List<Transaction> history = transactionRepository.findByUserIdAndDateBetween(
+                userAuth.getUser().getId(), firstMonth.atDay(1), thisMonth.atDay(1).minusDays(1));
+
+        if (history.isEmpty()) {
+            return List.of();
+        }
+
+        BigDecimal income = BigDecimal.ZERO;
+        BigDecimal expense = BigDecimal.ZERO;
+        for (Transaction t : history) {
+            if (t.getType() == TransactionType.INCOME) {
+                income = income.add(t.getAmount());
+            } else {
+                expense = expense.add(t.getAmount());
+            }
+        }
+
+        BigDecimal avgIncome = income.divide(BigDecimal.valueOf(HISTORY_MONTHS), 2, RoundingMode.HALF_UP);
+        BigDecimal avgExpense = expense.divide(BigDecimal.valueOf(HISTORY_MONTHS), 2, RoundingMode.HALF_UP);
+
+        List<ProjectionResponse> result = new ArrayList<>();
+        for (int i = 1; i <= months; i++) {
+            result.add(new ProjectionResponse(
+                    thisMonth.plusMonths(i).toString(),
+                    avgIncome,
+                    avgExpense,
+                    avgIncome.subtract(avgExpense)));
+        }
         return result;
     }
 }

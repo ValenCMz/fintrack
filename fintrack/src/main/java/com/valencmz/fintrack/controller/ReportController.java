@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,9 +14,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.valencmz.fintrack.errors.ApiResponse;
+import com.valencmz.fintrack.errors.CustomAppException;
 import com.valencmz.fintrack.model.dto.report.AccountBalanceResponse;
 import com.valencmz.fintrack.model.dto.report.CategoryExpenseResponse;
 import com.valencmz.fintrack.model.dto.report.MonthlySummaryResponse;
+import com.valencmz.fintrack.model.dto.report.ProjectionResponse;
 import com.valencmz.fintrack.model.entity.auth.UserAuth;
 import com.valencmz.fintrack.service.report.ReportService;
 
@@ -51,5 +54,15 @@ public class ReportController {
     public ResponseEntity<ApiResponse<List<AccountBalanceResponse>>> balance(
             @AuthenticationPrincipal UserAuth userAuth) {
         return ResponseEntity.ok(ApiResponse.success(reportService.balance(userAuth)));
+    }
+
+    @GetMapping("/projections")
+    public ResponseEntity<ApiResponse<List<ProjectionResponse>>> projections(
+            @RequestParam(required = false, defaultValue = "3") Integer months,
+            @AuthenticationPrincipal UserAuth userAuth) {
+        if (months < 1 || months > 12) {
+            throw new CustomAppException("months debe estar entre 1 y 12", HttpStatus.BAD_REQUEST);
+        }
+        return ResponseEntity.ok(ApiResponse.success(reportService.projections(userAuth, months)));
     }
 }
