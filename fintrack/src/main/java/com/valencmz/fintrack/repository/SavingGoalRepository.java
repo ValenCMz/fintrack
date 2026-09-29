@@ -10,8 +10,6 @@ import com.valencmz.fintrack.model.entity.SavingGoal;
 
 public interface SavingGoalRepository extends JpaRepository<SavingGoal, UUID> {
 
-    public List<SavingGoal> findByUserId(UUID userId);
-
     public List<SavingGoal> findByUserIdAndActive(UUID userId, boolean active);
 
     public Optional<SavingGoal> findByIdAndUserId(UUID id, UUID userId);

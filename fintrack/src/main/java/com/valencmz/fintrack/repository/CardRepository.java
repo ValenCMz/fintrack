@@ -10,8 +10,6 @@ import com.valencmz.fintrack.model.entity.Card;
 
 public interface CardRepository extends JpaRepository<Card, UUID> {
 
-    public List<Card> findByUserId(UUID userId);
-
     public List<Card> findByUserIdAndActive(UUID userId, boolean active);
 
     public Optional<Card> findByIdAndUserId(UUID id, UUID userId);

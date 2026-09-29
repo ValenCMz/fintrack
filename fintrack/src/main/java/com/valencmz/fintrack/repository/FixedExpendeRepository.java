@@ -10,8 +10,6 @@ import com.valencmz.fintrack.model.entity.FixedExpende;
 
 public interface FixedExpendeRepository extends JpaRepository<FixedExpende, UUID> {
 
-    public List<FixedExpende> findByUserId(UUID userId);
-
     public List<FixedExpende> findByUserIdAndActive(UUID userId, boolean active);
 
     public Optional<FixedExpende> findByIdAndUserId(UUID id, UUID userId);

@@ -21,7 +21,7 @@ public class CardService {
     private CardRepository cardRepository;
 
     public List<CardResponse> getByUser(UserAuth userAuth) {
-        return cardRepository.findByUserId(userAuth.getUser().getId())
+        return cardRepository.findByUserIdAndActive(userAuth.getUser().getId(), true)
                 .stream().map(CardResponse::new).toList();
     }
 

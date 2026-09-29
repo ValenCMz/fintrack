@@ -29,7 +29,7 @@ public class FixedExpendeService {
     private AccountRepository accountRepository;
 
     public List<FixedExpendeResponse> getByUser(UserAuth userAuth) {
-        return fixedExpendeRepository.findByUserId(userAuth.getUser().getId())
+        return fixedExpendeRepository.findByUserIdAndActive(userAuth.getUser().getId(), true)
                 .stream().map(FixedExpendeResponse::new).toList();
     }
 

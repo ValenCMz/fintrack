@@ -21,7 +21,7 @@ public class SavingGoalService {
     private SavingGoalRepository savingGoalRepository;
 
     public List<SavingGoalResponse> getByUser(UserAuth userAuth) {
-        return savingGoalRepository.findByUserId(userAuth.getUser().getId())
+        return savingGoalRepository.findByUserIdAndActive(userAuth.getUser().getId(), true)
                 .stream().map(SavingGoalResponse::new).toList();
     }
 
