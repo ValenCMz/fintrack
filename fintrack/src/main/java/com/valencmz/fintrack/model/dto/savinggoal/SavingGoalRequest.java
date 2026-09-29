@@ -19,8 +19,10 @@ import lombok.NoArgsConstructor;
 public class SavingGoalRequest {
     @NotBlank
     private String name;
+    @NotNull
     @Positive
     private BigDecimal targetAmount;
+    @NotNull
     @PositiveOrZero
     private BigDecimal currentAmount;
     @NotNull

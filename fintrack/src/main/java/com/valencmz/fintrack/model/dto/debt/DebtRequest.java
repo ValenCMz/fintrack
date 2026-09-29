@@ -20,8 +20,10 @@ import lombok.NoArgsConstructor;
 public class DebtRequest {
     @NotBlank
     private String creditor;
+    @NotNull
     @Positive
     private BigDecimal totalAmount;
+    @NotNull
     @PositiveOrZero
     private BigDecimal remainingAmount;
     @NotNull

@@ -19,6 +19,7 @@ import lombok.NoArgsConstructor;
 public class MonotributoRequest {
     @NotBlank
     private String name;
+    @NotNull
     @Positive
     private BigDecimal monthlyAmount;
     @NotNull

@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 public class FixedExpendeRequest {
     @NotBlank
     private String name;
+    @NotNull
     @Positive
     private BigDecimal amount;
     @NotNull

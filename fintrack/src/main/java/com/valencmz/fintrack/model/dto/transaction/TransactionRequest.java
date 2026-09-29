@@ -21,6 +21,7 @@ public class TransactionRequest {
     private TransactionType type;
     @NotBlank
     private String description;
+    @NotNull
     @Positive
     private BigDecimal amount;
     @NotNull

@@ -20,6 +20,7 @@ public class CardRequest {
     private String holderName;
     @NotNull
     private LocalDate dueDay;
+    @NotNull
     @Positive
     private BigDecimal amount;
     private boolean active;
