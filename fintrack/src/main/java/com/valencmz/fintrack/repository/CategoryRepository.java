@@ -11,7 +11,7 @@ import com.valencmz.fintrack.model.entity.Category;
 
 public interface CategoryRepository extends JpaRepository<Category, UUID> {
 
-    public List<Category> findByUserId(UUID userId);
+    public List<Category> findByUserIdAndActive(UUID userId, boolean active);
 
     public List<Category> findAllByUserIdAndType(UUID userId, CategoryType type);
 

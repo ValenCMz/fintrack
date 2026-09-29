@@ -21,7 +21,7 @@ public class CategoryService {
     private CategoryRepository categoryRepository;
 
     public List<CategoryResponse> getByUser(UserAuth userAuth) {
-        return categoryRepository.findByUserId(userAuth.getUser().getId())
+        return categoryRepository.findByUserIdAndActive(userAuth.getUser().getId(), true)
                 .stream().map(CategoryResponse::new).toList();
     }
 
