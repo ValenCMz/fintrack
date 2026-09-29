@@ -7,6 +7,7 @@ import TransactionItem from "@/app/components/dashboard/TransactionItem";
 import SavingGoalCard from "@/app/components/dashboard/SavingGoalCard";
 import QuickActions from "@/app/components/dashboard/QuickActions";
 import UpcomingPayments from "@/app/components/dashboard/UpcomingPayments";
+import ProjectionPanel from "@/app/components/dashboard/ProjectionPanel";
 import { Wallet, TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
 import {
   api,
@@ -14,6 +15,7 @@ import {
   SavingGoal,
   MonthlySummary,
   AccountBalance,
+  Projection,
 } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
 import { useAuth } from "@/app/context/AuthContext";
@@ -24,22 +26,25 @@ export default function Index() {
   const [savingGoals, setSavingGoals] = useState<SavingGoal[]>([]);
   const [summary, setSummary] = useState<MonthlySummary | null>(null);
   const [balances, setBalances] = useState<AccountBalance[]>([]);
+  const [projections, setProjections] = useState<Projection[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
         const now = new Date();
-        const [tx, goals, sum, bal] = await Promise.all([
+        const [tx, goals, sum, bal, proj] = await Promise.all([
           api.listTransactions(),
           api.listSavingGoals(),
           api.monthlySummary(now.getFullYear(), now.getMonth() + 1),
           api.balance(),
+          api.projections(3),
         ]);
         setTransactions(tx);
         setSavingGoals(goals.filter((g) => g.active));
         setSummary(sum);
         setBalances(bal);
+        setProjections(proj);
       } catch {
         // los errores de auth ya redirigen; los demás se ignoran en el dashboard
       } finally {
@@ -96,6 +101,12 @@ export default function Index() {
           icon={PiggyBank}
         />
       </div>
+
+      {!loading && projections.length > 0 && (
+        <div className="mb-8">
+          <ProjectionPanel projections={projections} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 card-gradient rounded-xl p-5 animate-slide-up">
