@@ -44,7 +44,7 @@ erDiagram
         UUID id PK
         string name
         enum type
-        string owner
+        string owner "nullable"
         boolean active
         UUID user_id FK
     }

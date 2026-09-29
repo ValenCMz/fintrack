@@ -35,7 +35,10 @@ public class Account {
     @Column(name = "type", nullable = false)
     private AccountType type;
 
-    @Column(name = "owner", nullable = false)
+    // Opcional a proposito: la cuenta propia no tiene un "titular" que
+    // completar. Antes era NOT NULL y el POST /accounts devolvia 409 cuando el
+    // cliente no lo mandaba, que es el caso normal de una billetera propia.
+    @Column(name = "owner")
     private String owner;
 
     @Column(name = "active", nullable = false)

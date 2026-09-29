@@ -68,10 +68,38 @@ ApiResponse.error(HttpStatus.NOT_FOUND, "Cuenta no encontrada"); // error
 | `MethodArgumentNotValidException` | 400 | `campo: mensaje` de validación |
 | `HttpMessageNotReadableException` | 400 | Cuerpo de la petición inválido |
 | `AccessDeniedException` | 403 | No tiene permisos para realizar esta acción |
-| `DataIntegrityViolationException` | 409 | Conflicto con los datos existentes |
+| `DataIntegrityViolationException` | 409 | según el constraint violado (ver abajo) |
 | `Exception` (fallback) | 500 | Error interno del servidor |
 
 > Los errores de autenticación JWT se manejan en `JwtFilter` (401) porque corren **antes** del `DispatcherServlet`.
+
+### `DataIntegrityViolationException` traduce el constraint
+
+Una violación de integridad puede ser un email duplicado, un campo obligatorio
+faltante o una referencia que no existe. Antes las tres devolvían el mismo texto
+—"Conflicto con los datos existentes"— que no dizia qué corregir. Ahora
+`GlobalExceptionHandler` identifica el tipo de constraint y devuelve:
+
+| Constraint | Mensaje |
+|------------|---------|
+| `NOT NULL` | Falta un campo obligatorio |
+| `UNIQUE` | Ya existe un registro con ese valor |
+| `FOREIGN KEY` | No se encontró el registro relacionado |
+| `CHECK` | Un valor no cumple una restricción de la base |
+| otro | Conflicto con los datos existente |
+
+Se lee el mensaje de la causa más específica porque el de
+`DataIntegrityViolationException` es genérico, y se clasifica por texto y no
+por SQLState porque el texto de Postgres es el que trae el nombre del
+constraint. Cuando el mensaje no matchea ninguno de los cuatro casos se cae al
+texto genérico, así que un Postgres distinto no rompe el handler.
+
+Los detalles exactos (nombre de la columna, valores que chocaron) van al log,
+no a la respuesta: pueden contener datos de otros usuarios.
+
+> Los services igual deben validar lo que puedan antes de insertar. Esta
+> traducción es la red de contención para lo que se escape, no un sustituto
+> de `@NotNull` / `@NotBlank`.
 
 ## Cómo usar
 

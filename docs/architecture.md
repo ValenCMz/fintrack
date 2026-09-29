@@ -111,6 +111,21 @@ src/main/java/com/valencmz/fintrack/
 - **Dialect:** PostgreSQL
 - **Estrategia DDL:** `update` (Hibernate genera/actualiza las tablas automáticamente)
 
+#### Cambios que `ddl-auto=update` no aplica
+
+`update` crea tablas y columnas nuevas, pero **no afloja restricciones existentes**
+y no las borra. En este proyecto ya pasó una vez y hay que hacerlo a mano:
+
+```sql
+-- account.owner era NOT NULL y el DTO lo trata como opcional.
+-- Sin esto, POST /accounts sin "owner" devuelve 409.
+ALTER TABLE account ALTER COLUMN owner DROP NOT NULL;
+```
+
+Si agregás una columna que después querés nullable, o cambiás el tipo de una
+existente, el `ALTER TABLE` va aparte. No hay Flyway ni Liquibase en el
+proyecto, así que este bloque es el registro.
+
 ### Enumeraciones (Enums)
 
 | Enum | Valores |
@@ -136,7 +151,7 @@ Representa una **cuenta financiera** del usuario — dónde tiene la plata.
 |-------|-------------|
 | `name` | Nombre descriptivo ("Santander Caja de Ahorro") |
 | `type` | `CASH` (efectivo), `WALLET` (Mercado Pago), `BANK` (banco), `CARD` (tarjeta) |
-| `owner` | Titular de la cuenta |
+| `owner` | Titular de la cuenta. Opcional: la cuenta propia no tiene un titular que completar |
 | `active` | Si está en uso o fue desactivada |
 
 **Ejemplos:** "Billetera" (CASH), "Mercado Pago" (WALLET), "Santander Caja de Ahorro" (BANK).

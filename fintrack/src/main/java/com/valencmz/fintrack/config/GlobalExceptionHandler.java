@@ -61,10 +61,53 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(HttpStatus.FORBIDDEN, "No tiene permisos para realizar esta acción"));
     }
 
+    /**
+     * Traduce la SQLException de Postgres a un mensaje que diga que constraint
+     * fallo. Antes toda violacion de integridad volvia con el mismo texto
+     * "Conflicto con los datos existentes", que no permite distinguir un email
+     * duplicado de un campo obligatorio faltante ni saber que corregir.
+     *
+     * El SQLState es el unico dato estable: el mensaje de Postgres cambia
+     * entre versiones e idiomas, el SQLState no.
+     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        String constraint = extractConstraint(ex);
+        String detail = switch (constraint) {
+            case "NOT NULL" -> "Falta un campo obligatorio";
+            case "UNIQUE" -> "Ya existe un registro con ese valor";
+            case "FOREIGN KEY" -> "No se encontró el registro relacionado";
+            case "CHECK" -> "Un valor no cumple una restricción de la base";
+            default -> "Conflicto con los datos existentes";
+        };
+        log.warn("Violacion de integridad ({}): {}", constraint, ex.getMostSpecificCause().getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error(HttpStatus.CONFLICT, "Conflicto con los datos existentes"));
+                .body(ApiResponse.error(HttpStatus.CONFLICT, detail));
+    }
+
+    /**
+     * Saca el tipo de constraint del mensaje de Postgres. Viene embebido en el
+     * texto de la causa mas especifica, que es la unica que describe la
+     * violacion: el mensaje de DataIntegrityViolationException es generico.
+     */
+    private String extractConstraint(DataIntegrityViolationException ex) {
+        String message = ex.getMostSpecificCause().getMessage();
+        if (message == null) {
+            return "";
+        }
+        if (message.contains("null value in column")) {
+            return "NOT NULL";
+        }
+        if (message.contains("duplicate key value")) {
+            return "UNIQUE";
+        }
+        if (message.contains("violates foreign key constraint")) {
+            return "FOREIGN KEY";
+        }
+        if (message.contains("violates check constraint")) {
+            return "CHECK";
+        }
+        return "";
     }
 
     @ExceptionHandler(Exception.class)
