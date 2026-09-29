@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import MainLayout from "@/app/components/layout/MainLayout";
 import TransactionItem from "@/app/components/dashboard/TransactionItem";
 import { Button } from "@/components/ui/button";
@@ -126,6 +127,30 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
           Nuevo {isIncome ? "Ingreso" : "Gasto"}
         </Button>
       </div>
+
+      {(accounts.length === 0 || categories.length === 0) && (
+        <div className="card-gradient rounded-xl p-4 mb-6">
+          <p className="text-sm text-muted-foreground">
+            {accounts.length === 0 ? (
+              <>
+                Necesitás{" "}
+                <Link href="/cuentas" className="text-primary underline">
+                  crear una cuenta
+                </Link>{" "}
+                para registrar movimientos.
+              </>
+            ) : (
+              <>
+                No tenés categorías de {isIncome ? "ingreso" : "egreso"}.{" "}
+                <Link href="/categorias" className="text-primary underline">
+                  Creá una
+                </Link>
+                .
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       {showForm && (
         <form

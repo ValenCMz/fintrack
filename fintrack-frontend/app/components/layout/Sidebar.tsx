@@ -11,6 +11,7 @@ import {
   PiggyBank,
   MessageCircle,
   Settings,
+  Tags,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,6 +21,8 @@ import { useAuth } from "@/app/context/AuthContext";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: Landmark, label: "Cuentas", path: "/cuentas" },
+  { icon: Tags, label: "Categorías", path: "/categorias" },
   { icon: ArrowUpCircle, label: "Ingresos", path: "/ingresos" },
   { icon: ArrowDownCircle, label: "Egresos", path: "/egresos" },
   { icon: CalendarClock, label: "Gastos Fijos", path: "/gastos-fijos" },

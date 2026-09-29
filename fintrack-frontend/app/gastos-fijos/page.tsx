@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import MainLayout from "@/app/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,6 +98,30 @@ export default function GastosFijosPage() {
           Nuevo gasto fijo
         </Button>
       </div>
+
+      {(accounts.length === 0 || categories.length === 0) && (
+        <div className="card-gradient rounded-xl p-4 mb-6">
+          <p className="text-sm text-muted-foreground">
+            {accounts.length === 0 ? (
+              <>
+                Necesitás{" "}
+                <Link href="/cuentas" className="text-primary underline">
+                  crear una cuenta
+                </Link>{" "}
+                para registrar un gasto fijo.
+              </>
+            ) : (
+              <>
+                No tenés categorías de egreso.{" "}
+                <Link href="/categorias" className="text-primary underline">
+                  Creá una
+                </Link>
+                .
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       {showForm && (
         <form
