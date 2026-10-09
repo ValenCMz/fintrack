@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from "react";
 import MainLayout from "@/app/components/layout/MainLayout";
+import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Landmark, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api, Debt } from "@/lib/api";
@@ -94,57 +102,66 @@ export default function DeudasPage() {
             <p className="text-muted-foreground">Registrá y seguí tus deudas</p>
           </div>
         </div>
-        <Button onClick={() => setShowForm((v) => !v)}>
+        <Button onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Nueva deuda
         </Button>
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleCreate}
-          className="card-gradient rounded-xl p-6 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-          <Input
-            placeholder="Acreedor"
-            value={creditor}
-            onChange={(e) => setCreditor(e.target.value)}
-            required
-          />
-          <Input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            required
-          />
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Monto total"
-            value={totalAmount}
-            onChange={(e) => setTotalAmount(e.target.value)}
-            required
-          />
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Pendiente"
-            value={remainingAmount}
-            onChange={(e) => setRemainingAmount(e.target.value)}
-            required
-          />
-          <div className="md:col-span-2 flex gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      )}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Nueva deuda</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={handleCreate}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            <Input
+              placeholder="Acreedor"
+              value={creditor}
+              onChange={(e) => setCreditor(e.target.value)}
+              required
+            />
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              required
+            />
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Monto total"
+              value={totalAmount}
+              onChange={(e) => setTotalAmount(e.target.value)}
+              required
+            />
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Pendiente"
+              value={remainingAmount}
+              onChange={(e) => setRemainingAmount(e.target.value)}
+              required
+            />
+            <DialogFooter className="md:col-span-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowForm(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Guardando..." : "Guardar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="card-gradient rounded-xl p-5">
         {loading ? (
@@ -182,12 +199,13 @@ export default function DeudasPage() {
                       Marcar pagada
                     </button>
                   )}
-                  <button
-                    onClick={() => handleDelete(d.id)}
+                  <ConfirmDeleteButton
+                    onConfirm={() => handleDelete(d.id)}
+                    title="¿Eliminar deuda?"
                     className="text-xs text-muted-foreground hover:text-expense"
                   >
                     Eliminar
-                  </button>
+                  </ConfirmDeleteButton>
                 </div>
               </div>
             ))}

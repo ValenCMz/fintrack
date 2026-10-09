@@ -4,12 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import MainLayout from "@/app/components/layout/MainLayout";
 import TransactionItem from "@/app/components/dashboard/TransactionItem";
+import TransactionFormDialog from "@/app/components/forms/TransactionFormDialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Plus, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { toast } from "sonner";
-import { api, Transaction, Account, Category, TransactionRequest } from "@/lib/api";
-import { formatMoney, todayISO } from "@/lib/format";
+import { api, Transaction, Account, Category } from "@/lib/api";
+import { formatMoney } from "@/lib/format";
 
 interface TransactionsPageProps {
   type: "income" | "expense";
@@ -24,13 +24,6 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(todayISO());
-  const [accountId, setAccountId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
 
   const load = useCallback(async () => {
     const [tx, acc, cat] = await Promise.all([
@@ -54,36 +47,6 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
       }
     })();
   }, [load]);
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!accountId || !categoryId) {
-      toast.error("Seleccioná cuenta y categoría");
-      return;
-    }
-    setSaving(true);
-    try {
-      const payload: TransactionRequest = {
-        type: backendType,
-        description,
-        amount: Number(amount),
-        date,
-        categoryId,
-        accountId,
-      };
-      await api.createTransaction(payload);
-      await load();
-      setDescription("");
-      setAmount("");
-      setDate(todayISO());
-      setShowForm(false);
-      toast.success(isIncome ? "Ingreso registrado" : "Gasto registrado");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al guardar");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleDelete(id: string) {
     try {
@@ -121,7 +84,7 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
         </div>
         <Button
           className={isIncome ? "bg-income hover:bg-income/90" : "bg-expense hover:bg-expense/90"}
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => setShowForm(true)}
         >
           <Plus className="w-4 h-4 mr-2" />
           Nuevo {isIncome ? "Ingreso" : "Gasto"}
@@ -152,73 +115,12 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
         </div>
       )}
 
-      {showForm && (
-        <form
-          onSubmit={handleCreate}
-          className="card-gradient rounded-xl p-6 mb-6 space-y-4 animate-slide-up"
-        >
-          <h3 className="font-display font-semibold">
-            Nuevo {isIncome ? "ingreso" : "gasto"}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              placeholder="Descripción"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-            />
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="Monto"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
-            <Input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
-            <select
-              className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              required
-            >
-              <option value="">Cuenta...</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              required
-            >
-              <option value="">Categoría...</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      )}
+      <TransactionFormDialog
+        type={type}
+        open={showForm}
+        onOpenChange={setShowForm}
+        onCreated={load}
+      />
 
       <div className="card-gradient rounded-xl p-6 mb-6 animate-slide-up">
         <div className="flex items-center justify-between">
@@ -250,22 +152,16 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
         ) : (
           <div className="space-y-3">
             {transactions.map((t) => (
-              <div key={t.id} className="relative">
-                <TransactionItem
-                  type={t.type === "INCOME" ? "income" : "expense"}
-                  description={t.description}
-                  category={t.categoryName ?? "Sin categoría"}
-                  amount={Number(t.amount)}
-                  date={t.date}
-                  account={t.accountName ?? "—"}
-                />
-                <button
-                  onClick={() => handleDelete(t.id)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-expense"
-                >
-                  Eliminar
-                </button>
-              </div>
+              <TransactionItem
+                key={t.id}
+                type={t.type === "INCOME" ? "income" : "expense"}
+                description={t.description}
+                category={t.categoryName ?? "Sin categoría"}
+                amount={Number(t.amount)}
+                date={t.date}
+                account={t.accountName ?? "—"}
+                onDelete={() => handleDelete(t.id)}
+              />
             ))}
           </div>
         )}

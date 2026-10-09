@@ -2,6 +2,7 @@ package com.valencmz.fintrack.service.report;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -33,6 +34,12 @@ public class ReportService {
     private TransactionRepository transactionRepository;
     @Autowired
     private AccountRepository accountRepository;
+
+    private Clock clock = Clock.systemDefaultZone();
+
+    public void setClock(Clock clock) {
+        this.clock = clock != null ? clock : Clock.systemDefaultZone();
+    }
 
     public MonthlySummaryResponse monthlySummary(UserAuth userAuth, int year, int month) {
         YearMonth ym = YearMonth.of(year, month);
@@ -107,7 +114,7 @@ public class ReportService {
      * promedio historico ya los arrastra porque son transacciones.
      */
     public List<ProjectionResponse> projections(UserAuth userAuth, int months) {
-        YearMonth thisMonth = YearMonth.now();
+        YearMonth thisMonth = YearMonth.now(clock);
         YearMonth firstMonth = thisMonth.minusMonths(HISTORY_MONTHS);
 
         List<Transaction> history = transactionRepository.findByUserIdAndDateBetween(

@@ -168,6 +168,7 @@ public class UsuarioService {
         PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(
                 resetPasswordRequest.getResetToken());
         if (passwordResetToken == null ||
+                passwordResetToken.isUsed() ||
                 passwordResetToken.isExpired() ||
                 !Objects.equals(
                         jwtService.extractEmail(resetPasswordRequest.getResetToken()),

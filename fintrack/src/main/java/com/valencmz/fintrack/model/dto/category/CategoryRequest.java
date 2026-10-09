@@ -5,6 +5,7 @@ import com.valencmz.fintrack.model.entity.Category;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,8 +15,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CategoryRequest {
     @NotBlank
+    @Size(max = 80)
     private String name;
     @NotBlank
+    @Size(max = 30)
     private String color;
     @NotNull
     private CategoryType type;

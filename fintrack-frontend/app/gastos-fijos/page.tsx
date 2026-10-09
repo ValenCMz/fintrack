@@ -3,8 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import MainLayout from "@/app/components/layout/MainLayout";
+import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { CalendarClock, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api, FixedExpense, Account, Category } from "@/lib/api";
@@ -93,7 +101,7 @@ export default function GastosFijosPage() {
             <p className="text-muted-foreground">Gestioná tus pagos recurrentes</p>
           </div>
         </div>
-        <Button onClick={() => setShowForm((v) => !v)}>
+        <Button onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Nuevo gasto fijo
         </Button>
@@ -123,73 +131,82 @@ export default function GastosFijosPage() {
         </div>
       )}
 
-      {showForm && (
-        <form
-          onSubmit={handleCreate}
-          className="card-gradient rounded-xl p-6 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-          <Input
-            placeholder="Nombre"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Monto"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-          />
-          <Input
-            type="date"
-            value={dueDay}
-            onChange={(e) => setDueDay(e.target.value)}
-            required
-          />
-          <Input
-            placeholder="Frecuencia"
-            value={frequency}
-            onChange={(e) => setFrequency(e.target.value)}
-          />
-          <select
-            className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
-            value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
-            required
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Nuevo gasto fijo</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={handleCreate}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            <option value="">Cuenta...</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            required
-          >
-            <option value="">Categoría...</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <div className="md:col-span-2 flex gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      )}
+            <Input
+              placeholder="Nombre"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Monto"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+            <Input
+              type="date"
+              value={dueDay}
+              onChange={(e) => setDueDay(e.target.value)}
+              required
+            />
+            <Input
+              placeholder="Frecuencia"
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value)}
+            />
+            <select
+              className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
+              required
+            >
+              <option value="">Cuenta...</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+            <select
+              className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              required
+            >
+              <option value="">Categoría...</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <DialogFooter className="md:col-span-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowForm(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Guardando..." : "Guardar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="card-gradient rounded-xl p-5">
         {loading ? (
@@ -213,12 +230,13 @@ export default function GastosFijosPage() {
                   <p className="font-display font-semibold text-expense">
                     {formatMoney(f.amount)}
                   </p>
-                  <button
-                    onClick={() => handleDelete(f.id)}
+                  <ConfirmDeleteButton
+                    onConfirm={() => handleDelete(f.id)}
+                    title="¿Eliminar gasto fijo?"
                     className="text-xs text-muted-foreground hover:text-expense"
                   >
                     Eliminar
-                  </button>
+                  </ConfirmDeleteButton>
                 </div>
               </div>
             ))}

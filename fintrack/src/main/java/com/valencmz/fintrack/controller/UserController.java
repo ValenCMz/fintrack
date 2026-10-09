@@ -21,6 +21,8 @@ import com.valencmz.fintrack.model.dto.user.UsuarioUpdateDTO;
 import com.valencmz.fintrack.model.entity.auth.UserAuth;
 import com.valencmz.fintrack.service.UsuarioService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/users")
 public class UserController {
@@ -44,7 +46,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> update(@PathVariable UUID id,
-            @RequestBody UsuarioUpdateDTO dto,
+            @Valid @RequestBody UsuarioUpdateDTO dto,
             @AuthenticationPrincipal UserAuth userAuth) {
         usuarioService.updateUser(id, dto, userAuth);
         return ResponseEntity.ok(ApiResponse.success("Usuario actualizado"));

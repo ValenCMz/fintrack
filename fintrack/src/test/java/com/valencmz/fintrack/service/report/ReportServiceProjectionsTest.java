@@ -8,8 +8,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,10 +32,18 @@ import com.valencmz.fintrack.model.entity.auth.UserAuth;
 import com.valencmz.fintrack.repository.AccountRepository;
 import com.valencmz.fintrack.repository.TransactionRepository;
 
+/**
+ * El reloj esta fijado a AHORA = junio 2026. Antes estas proyecciones dependian
+ * de YearMonth.now() y un test que corriera a las 23:59 del ultimo dia del mes
+ * cruzaba de mes a mitad de ejecucion y fallaba sin que hubiera cambiado el
+ * codigo. Con el reloj inyectado son deterministicas, y los tests de cruce de
+ * mes lo prueban a proposito.
+ */
 @DisplayName("GET /api/reports/projections")
 class ReportServiceProjectionsTest {
 
     private static final int HISTORY_MONTHS = 3;
+    private static final YearMonth AHORA = YearMonth.of(2026, 6);
 
     private TransactionRepository transactionRepository;
     private ReportService reportService;
@@ -44,6 +55,8 @@ class ReportServiceProjectionsTest {
         when(transactionRepository.findByUserIdAndDateBetween(any(), any(), any())).thenReturn(List.of());
 
         reportService = new ReportService();
+        reportService.setClock(Clock.fixed(
+                AHORA.atDay(15).atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
         ReflectionTestUtils.setField(reportService, "transactionRepository", transactionRepository);
         ReflectionTestUtils.setField(reportService, "accountRepository", mock(AccountRepository.class));
 
@@ -89,7 +102,7 @@ class ReportServiceProjectionsTest {
         @Test
         @DisplayName("promedia los ultimos 3 meses cerrados")
         void promediaLosUltimosTresMesesCerrados() {
-            YearMonth last = YearMonth.now().minusMonths(1);
+            YearMonth last = AHORA.minusMonths(1);
             history(
                     transaction(TransactionType.INCOME, "300000", last.minusMonths(2)),
                     transaction(TransactionType.INCOME, "300000", last.minusMonths(1)),
@@ -109,51 +122,45 @@ class ReportServiceProjectionsTest {
         @Test
         @DisplayName("divide siempre por 3, no por la cantidad de meses con datos")
         void divideSiemprePorTres() {
-            YearMonth last = YearMonth.now().minusMonths(1);
+            YearMonth last = AHORA.minusMonths(1);
             history(transaction(TransactionType.EXPENSE, "300000", last));
 
             List<ProjectionResponse> result = reportService.projections(userAuth, 1);
 
-            // un solo mes cargado: el promedio conservador es un tercio
             assertThat(result.get(0).getEstimatedExpense()).isEqualByComparingTo("100000.00");
         }
 
         @Test
         @DisplayName("el filtro de fechas abarca los 3 meses cerrados completos")
         void elFiltroAbarcaTresMesesCerrados() {
-            YearMonth thisMonth = YearMonth.now();
-            YearMonth firstMonth = thisMonth.minusMonths(HISTORY_MONTHS);
+            YearMonth firstMonth = AHORA.minusMonths(HISTORY_MONTHS);
 
-            history(transaction(TransactionType.INCOME, "300000", thisMonth.minusMonths(1)));
+            history(transaction(TransactionType.INCOME, "300000", AHORA.minusMonths(1)));
             reportService.projections(userAuth, 3);
 
             verify(transactionRepository).findByUserIdAndDateBetween(
                     eq(userAuth.getUser().getId()),
                     eq(firstMonth.atDay(1)),
-                    eq(thisMonth.atDay(1).minusDays(1)));
+                    eq(AHORA.atDay(1).minusDays(1)));
         }
 
         @Test
         @DisplayName("el historico excluye el mes en curso por la ventana de fechas")
         void elHistoricoExcluyeElMesEnCurso() {
-            YearMonth thisMonth = YearMonth.now();
-            history(transaction(TransactionType.INCOME, "300000", thisMonth.minusMonths(1)));
+            history(transaction(TransactionType.INCOME, "300000", AHORA.minusMonths(1)));
 
             reportService.projections(userAuth, 1);
 
-            // La exclusion del mes en curso no la hace el service: la hace la query,
-            // cuya ventana termina el ultimo dia del mes anterior. Si esa ventana
-            // cambia, el promedio empieza a contaminarse con el mes corriente.
             verify(transactionRepository).findByUserIdAndDateBetween(
                     eq(userAuth.getUser().getId()),
-                    eq(thisMonth.minusMonths(HISTORY_MONTHS).atDay(1)),
-                    eq(thisMonth.atDay(1).minusDays(1)));
+                    eq(AHORA.minusMonths(HISTORY_MONTHS).atDay(1)),
+                    eq(AHORA.atDay(1).minusDays(1)));
         }
 
         @Test
         @DisplayName("separa ingresos de gastos")
         void separaIngresosDeGastos() {
-            YearMonth last = YearMonth.now().minusMonths(1);
+            YearMonth last = AHORA.minusMonths(1);
             history(
                     transaction(TransactionType.INCOME, "300000", last),
                     transaction(TransactionType.EXPENSE, "50000", last));
@@ -168,7 +175,7 @@ class ReportServiceProjectionsTest {
         @Test
         @DisplayName("redondea a dos decimales")
         void redondeaADosDecimales() {
-            YearMonth last = YearMonth.now().minusMonths(1);
+            YearMonth last = AHORA.minusMonths(1);
             history(transaction(TransactionType.EXPENSE, "100000", last));
 
             List<ProjectionResponse> result = reportService.projections(userAuth, 1);
@@ -179,7 +186,7 @@ class ReportServiceProjectionsTest {
         @Test
         @DisplayName("solo lee transacciones: las cuentas se saldoan en /balance")
         void soloLeeTransacciones() {
-            YearMonth last = YearMonth.now().minusMonths(1);
+            YearMonth last = AHORA.minusMonths(1);
             history(transaction(TransactionType.INCOME, "300000", last));
 
             reportService.projections(userAuth, 3);
@@ -207,29 +214,64 @@ class ReportServiceProjectionsTest {
         @Test
         @DisplayName("devuelve los meses pedidos arrancando en el que sigue")
         void devuelveLosMesesPedidos() {
-            YearMonth last = YearMonth.now().minusMonths(1);
+            YearMonth last = AHORA.minusMonths(1);
             history(transaction(TransactionType.INCOME, "300000", last));
 
             List<ProjectionResponse> result = reportService.projections(userAuth, 3);
 
             assertThat(result).hasSize(3);
-            assertThat(result.get(0).getMonth()).isEqualTo(YearMonth.now().plusMonths(1).toString());
-            assertThat(result.get(1).getMonth()).isEqualTo(YearMonth.now().plusMonths(2).toString());
-            assertThat(result.get(2).getMonth()).isEqualTo(YearMonth.now().plusMonths(3).toString());
+            assertThat(result.get(0).getMonth()).isEqualTo(AHORA.plusMonths(1).toString());
+            assertThat(result.get(1).getMonth()).isEqualTo(AHORA.plusMonths(2).toString());
+            assertThat(result.get(2).getMonth()).isEqualTo(AHORA.plusMonths(3).toString());
         }
 
         @Test
         @DisplayName("el gasto fijo no se suma aparte: su frecuencia es texto libre")
         void noSumaLosGastosFijos() {
-            YearMonth last = YearMonth.now().minusMonths(1);
+            YearMonth last = AHORA.minusMonths(1);
             history(transaction(TransactionType.EXPENSE, "300000", last));
 
             List<ProjectionResponse> result = reportService.projections(userAuth, 12);
 
-            // solo entran los pagos ya registrados como transacciones
             assertThat(result).hasSize(12);
             assertThat(result).allSatisfy(p ->
                     assertThat(p.getEstimatedExpense()).isEqualByComparingTo("100000.00"));
+        }
+
+        @Test
+        @DisplayName("correr al ultimo segundo del mes no cambia la ventana ni el promedio")
+        void cruceDeFinDeMes() {
+            reportService.setClock(Clock.fixed(
+                    AHORA.atDay(30).atTime(23, 59, 59).toInstant(ZoneOffset.UTC), ZoneOffset.UTC));
+
+            YearMonth last = AHORA.minusMonths(1);
+            history(transaction(TransactionType.INCOME, "300000", last));
+
+            List<ProjectionResponse> result = reportService.projections(userAuth, 1);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getMonth()).isEqualTo("2026-07");
+            verify(transactionRepository).findByUserIdAndDateBetween(
+                    eq(userAuth.getUser().getId()),
+                    eq(LocalDate.parse("2026-03-01")),
+                    eq(LocalDate.parse("2026-05-31")));
+        }
+
+        @Test
+        @DisplayName("correr al primer instante del mes siguiente corta la historia un mes")
+        void cruceDeInicioDeMes() {
+            reportService.setClock(Clock.fixed(
+                    AHORA.plusMonths(1).atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC), ZoneOffset.UTC));
+
+            YearMonth last = AHORA.minusMonths(1);
+            history(transaction(TransactionType.INCOME, "300000", last));
+
+            reportService.projections(userAuth, 1);
+
+            verify(transactionRepository).findByUserIdAndDateBetween(
+                    eq(userAuth.getUser().getId()),
+                    eq(LocalDate.parse("2026-04-01")),
+                    eq(LocalDate.parse("2026-06-30")));
         }
     }
 }

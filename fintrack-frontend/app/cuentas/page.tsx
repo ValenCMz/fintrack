@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from "react";
 import MainLayout from "@/app/components/layout/MainLayout";
+import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Landmark, Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { api, Account, AccountType } from "@/lib/api";
@@ -99,49 +107,59 @@ export default function CuentasPage() {
             <p className="text-muted-foreground">Administrá tus cuentas y billeteras</p>
           </div>
         </div>
-        <Button onClick={() => (editingId ? resetForm() : setShowForm((v) => !v))}>
+        <Button onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Nueva cuenta
         </Button>
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="card-gradient rounded-xl p-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4"
-        >
-          <Input
-            placeholder="Nombre"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
-          <select
-            className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
-            value={form.type}
-            onChange={(e) => setForm({ ...form, type: e.target.value as AccountType })}
+      <Dialog
+        open={showForm}
+        onOpenChange={(v) => (v ? setShowForm(true) : resetForm())}
+      >
+        <DialogContent aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>
+              {editingId ? "Editar cuenta" : "Nueva cuenta"}
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
           >
-            {(Object.keys(TYPE_LABELS) as AccountType[]).map((t) => (
-              <option key={t} value={t}>
-                {TYPE_LABELS[t]}
-              </option>
-            ))}
-          </select>
-          <Input
-            placeholder="Titular (opcional)"
-            value={form.owner}
-            onChange={(e) => setForm({ ...form, owner: e.target.value })}
-          />
-          <div className="md:col-span-3 flex gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar"}
-            </Button>
-            <Button type="button" variant="outline" onClick={resetForm}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      )}
+            <Input
+              placeholder="Nombre"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+            <select
+              className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value as AccountType })}
+            >
+              {(Object.keys(TYPE_LABELS) as AccountType[]).map((t) => (
+                <option key={t} value={t}>
+                  {TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+            <Input
+              placeholder="Titular (opcional)"
+              value={form.owner}
+              onChange={(e) => setForm({ ...form, owner: e.target.value })}
+            />
+            <DialogFooter className="md:col-span-3">
+              <Button type="button" variant="outline" onClick={resetForm}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="card-gradient rounded-xl p-5">
         {loading ? (
@@ -174,12 +192,13 @@ export default function CuentasPage() {
                     <Pencil className="w-3 h-3" />
                     Editar
                   </button>
-                  <button
-                    onClick={() => handleDelete(a.id)}
+                  <ConfirmDeleteButton
+                    onConfirm={() => handleDelete(a.id)}
+                    title="¿Eliminar cuenta?"
                     className="text-xs text-muted-foreground hover:text-expense"
                   >
                     Eliminar
-                  </button>
+                  </ConfirmDeleteButton>
                 </div>
               </div>
             ))}

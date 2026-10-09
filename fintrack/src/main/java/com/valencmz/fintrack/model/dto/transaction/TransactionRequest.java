@@ -6,9 +6,11 @@ import java.util.UUID;
 
 import com.valencmz.fintrack.enums.TransactionType;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,12 +22,15 @@ public class TransactionRequest {
     @NotNull
     private TransactionType type;
     @NotBlank
+    @Size(max = 255)
     private String description;
     @NotNull
     @Positive
+    @Digits(integer = 36, fraction = 2)
     private BigDecimal amount;
     @NotNull
     private LocalDate date;
+    @Size(max = 1000)
     private String notes;
     @NotNull
     private UUID categoryId;

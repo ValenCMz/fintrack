@@ -2,13 +2,16 @@ package com.valencmz.fintrack.model.dto.user;
 
 import com.valencmz.fintrack.enums.Rol;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Size;
 
 public class UsuarioUpdateDTO {
 
     @JsonProperty("username")
+    @Size(max = 50)
     private String username;
 
     @JsonProperty("email")
+    @Size(max = 254)
     private String email;
 
     @JsonProperty("rol")

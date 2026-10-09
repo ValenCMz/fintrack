@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from "react";
 import MainLayout from "@/app/components/layout/MainLayout";
+import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { FileText, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api, Monotributo } from "@/lib/api";
@@ -73,48 +81,57 @@ export default function MonotributoPage() {
             <p className="text-muted-foreground">Controlá tus pagos de monotributo</p>
           </div>
         </div>
-        <Button onClick={() => setShowForm((v) => !v)}>
+        <Button onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Nuevo
         </Button>
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleCreate}
-          className="card-gradient rounded-xl p-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4"
-        >
-          <Input
-            placeholder="Categoría"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <Input
-            type="date"
-            value={dueDay}
-            onChange={(e) => setDueDay(e.target.value)}
-            required
-          />
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Monto mensual"
-            value={monthlyAmount}
-            onChange={(e) => setMonthlyAmount(e.target.value)}
-            required
-          />
-          <div className="md:col-span-3 flex gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      )}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Nuevo monotributo</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={handleCreate}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          >
+            <Input
+              placeholder="Categoría"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <Input
+              type="date"
+              value={dueDay}
+              onChange={(e) => setDueDay(e.target.value)}
+              required
+            />
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Monto mensual"
+              value={monthlyAmount}
+              onChange={(e) => setMonthlyAmount(e.target.value)}
+              required
+            />
+            <DialogFooter className="md:col-span-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowForm(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Guardando..." : "Guardar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="card-gradient rounded-xl p-5">
         {loading ? (
@@ -139,12 +156,13 @@ export default function MonotributoPage() {
                   <p className="font-display font-semibold">
                     {formatMoney(m.monthlyAmount)}
                   </p>
-                  <button
-                    onClick={() => handleDelete(m.id)}
+                  <ConfirmDeleteButton
+                    onConfirm={() => handleDelete(m.id)}
+                    title="¿Eliminar monotributo?"
                     className="text-xs text-muted-foreground hover:text-expense"
                   >
                     Eliminar
-                  </button>
+                  </ConfirmDeleteButton>
                 </div>
               </div>
             ))}

@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import MainLayout from "@/app/components/layout/MainLayout";
 import StatCard from "@/app/components/dashboard/StatCard";
 import TransactionItem from "@/app/components/dashboard/TransactionItem";
 import SavingGoalCard from "@/app/components/dashboard/SavingGoalCard";
-import QuickActions from "@/app/components/dashboard/QuickActions";
+import QuickActions, { QuickAction } from "@/app/components/dashboard/QuickActions";
 import UpcomingPayments from "@/app/components/dashboard/UpcomingPayments";
 import ProjectionPanel from "@/app/components/dashboard/ProjectionPanel";
+import TransactionFormDialog from "@/app/components/forms/TransactionFormDialog";
+import CardFormDialog from "@/app/components/forms/CardFormDialog";
+import SavingGoalFormDialog from "@/app/components/forms/SavingGoalFormDialog";
 import { Wallet, TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
 import {
   api,
@@ -28,30 +31,35 @@ export default function Index() {
   const [balances, setBalances] = useState<AccountBalance[]>([]);
   const [projections, setProjections] = useState<Projection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialog, setDialog] = useState<QuickAction | null>(null);
+
+  const load = useCallback(async () => {
+    const now = new Date();
+    const [tx, goals, sum, bal, proj] = await Promise.all([
+      api.listTransactions(),
+      api.listSavingGoals(),
+      api.monthlySummary(now.getFullYear(), now.getMonth() + 1),
+      api.balance(),
+      api.projections(3),
+    ]);
+    setTransactions(tx);
+    setSavingGoals(goals.filter((g) => g.active));
+    setSummary(sum);
+    setBalances(bal);
+    setProjections(proj);
+  }, []);
 
   useEffect(() => {
     (async () => {
       try {
-        const now = new Date();
-        const [tx, goals, sum, bal, proj] = await Promise.all([
-          api.listTransactions(),
-          api.listSavingGoals(),
-          api.monthlySummary(now.getFullYear(), now.getMonth() + 1),
-          api.balance(),
-          api.projections(3),
-        ]);
-        setTransactions(tx);
-        setSavingGoals(goals.filter((g) => g.active));
-        setSummary(sum);
-        setBalances(bal);
-        setProjections(proj);
+        await load();
       } catch {
         // los errores de auth ya redirigen; los demás se ignoran en el dashboard
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [load]);
 
   const totalBalance = balances.reduce((s, b) => s + Number(b.balance), 0);
   const totalSaved = savingGoals.reduce((s, g) => s + Number(g.currentAmount), 0);
@@ -140,7 +148,7 @@ export default function Index() {
         </div>
 
         <div className="space-y-6">
-          <QuickActions />
+          <QuickActions onAction={setDialog} />
           <UpcomingPayments />
         </div>
       </div>
@@ -167,6 +175,29 @@ export default function Index() {
           </div>
         )}
       </div>
+
+      <TransactionFormDialog
+        type="income"
+        open={dialog === "income"}
+        onOpenChange={(v) => setDialog(v ? "income" : null)}
+        onCreated={load}
+      />
+      <TransactionFormDialog
+        type="expense"
+        open={dialog === "expense"}
+        onOpenChange={(v) => setDialog(v ? "expense" : null)}
+        onCreated={load}
+      />
+      <CardFormDialog
+        open={dialog === "card"}
+        onOpenChange={(v) => setDialog(v ? "card" : null)}
+        onCreated={load}
+      />
+      <SavingGoalFormDialog
+        open={dialog === "saving"}
+        onOpenChange={(v) => setDialog(v ? "saving" : null)}
+        onCreated={load}
+      />
     </MainLayout>
   );
 }

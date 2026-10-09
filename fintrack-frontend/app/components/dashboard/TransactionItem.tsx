@@ -1,5 +1,7 @@
 import { ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatMoney, formatDate } from "@/lib/format";
+import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 
 interface TransactionItemProps {
   type: "income" | "expense";
@@ -8,6 +10,7 @@ interface TransactionItemProps {
   amount: number;
   date: string;
   account: string;
+  onDelete?: () => void;
 }
 
 const TransactionItem = ({
@@ -17,6 +20,7 @@ const TransactionItem = ({
   amount,
   date,
   account,
+  onDelete,
 }: TransactionItemProps) => {
   const isIncome = type === "income";
 
@@ -44,17 +48,28 @@ const TransactionItem = ({
         </div>
       </div>
 
-      <div className="text-right">
+      <div className="text-right shrink-0">
         <p
           className={cn(
             "font-display font-semibold",
             isIncome ? "text-income" : "text-expense"
           )}
         >
-          {isIncome ? "+" : "-"}${amount.toLocaleString()}
+          {isIncome ? "+" : "-"}
+          {formatMoney(amount)}
         </p>
-        <p className="text-xs text-muted-foreground">{date}</p>
+        <p className="text-xs text-muted-foreground">{formatDate(date)}</p>
       </div>
+
+      {onDelete && (
+        <ConfirmDeleteButton
+          onConfirm={onDelete}
+          title="¿Eliminar movimiento?"
+          className="shrink-0 text-xs text-muted-foreground hover:text-expense"
+        >
+          Eliminar
+        </ConfirmDeleteButton>
+      )}
     </div>
   );
 };

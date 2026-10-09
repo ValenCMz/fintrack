@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from "react";
 import MainLayout from "@/app/components/layout/MainLayout";
+import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tags, Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { api, Category, CategoryType } from "@/lib/api";
@@ -100,53 +108,63 @@ export default function CategoriasPage() {
             <p className="text-muted-foreground">Clasificá tus ingresos y egresos</p>
           </div>
         </div>
-        <Button onClick={() => (editingId ? resetForm() : setShowForm((v) => !v))}>
+        <Button onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Nueva categoría
         </Button>
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="card-gradient rounded-xl p-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4"
-        >
-          <Input
-            placeholder="Nombre"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
-          <select
-            className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
-            value={form.type}
-            onChange={(e) => setForm({ ...form, type: e.target.value as CategoryType })}
+      <Dialog
+        open={showForm}
+        onOpenChange={(v) => (v ? setShowForm(true) : resetForm())}
+      >
+        <DialogContent aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>
+              {editingId ? "Editar categoría" : "Nueva categoría"}
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
           >
-            {(Object.keys(TYPE_LABELS) as CategoryType[]).map((t) => (
-              <option key={t} value={t}>
-                {TYPE_LABELS[t]}
-              </option>
-            ))}
-          </select>
-          <label className="flex items-center gap-3 bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm">
-            Color
-            <input
-              type="color"
-              value={form.color}
-              onChange={(e) => setForm({ ...form, color: e.target.value })}
-              className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
+            <Input
+              placeholder="Nombre"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
             />
-          </label>
-          <div className="md:col-span-3 flex gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar"}
-            </Button>
-            <Button type="button" variant="outline" onClick={resetForm}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      )}
+            <select
+              className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value as CategoryType })}
+            >
+              {(Object.keys(TYPE_LABELS) as CategoryType[]).map((t) => (
+                <option key={t} value={t}>
+                  {TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+            <label className="flex items-center gap-3 bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm">
+              Color
+              <input
+                type="color"
+                value={form.color}
+                onChange={(e) => setForm({ ...form, color: e.target.value })}
+                className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
+              />
+            </label>
+            <DialogFooter className="md:col-span-3">
+              <Button type="button" variant="outline" onClick={resetForm}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[
@@ -181,12 +199,13 @@ export default function CategoriasPage() {
                         <Pencil className="w-3 h-3" />
                         Editar
                       </button>
-                      <button
-                        onClick={() => handleDelete(c.id)}
+                      <ConfirmDeleteButton
+                        onConfirm={() => handleDelete(c.id)}
+                        title="¿Eliminar categoría?"
                         className="text-xs text-muted-foreground hover:text-expense"
                       >
                         Eliminar
-                      </button>
+                      </ConfirmDeleteButton>
                     </div>
                   </div>
                 ))}

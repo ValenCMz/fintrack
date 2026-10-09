@@ -24,6 +24,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.valencmz.fintrack.enums.Rol;
 import com.valencmz.fintrack.errors.CustomAppException;
 import com.valencmz.fintrack.model.dto.auth.ForgotPasswordDTO;
+import com.valencmz.fintrack.model.dto.auth.ResetPasswordRequestDTO;
 import com.valencmz.fintrack.model.dto.user.UsuarioUpdateDTO;
 import com.valencmz.fintrack.model.entity.User;
 import com.valencmz.fintrack.model.entity.auth.PasswordResetToken;
@@ -38,6 +39,7 @@ class UsuarioServiceTest {
     private JwtService jwtService;
     private EmailService emailService;
     private PasswordResetTokenRepository passwordResetTokenRepository;
+    private PasswordEncoder passwordEncoder;
     private UsuarioService usuarioService;
 
     @BeforeEach
@@ -52,7 +54,8 @@ class UsuarioServiceTest {
         ReflectionTestUtils.setField(usuarioService, "jwtService", jwtService);
         ReflectionTestUtils.setField(usuarioService, "emailService", emailService);
         ReflectionTestUtils.setField(usuarioService, "passwordResetTokenRepository", passwordResetTokenRepository);
-        ReflectionTestUtils.setField(usuarioService, "passwordEncoder", mock(PasswordEncoder.class));
+        passwordEncoder = mock(PasswordEncoder.class);
+        ReflectionTestUtils.setField(usuarioService, "passwordEncoder", passwordEncoder);
         ReflectionTestUtils.setField(usuarioService, "authManager", mock(AuthenticationManager.class));
         ReflectionTestUtils.setField(usuarioService, "frontendUrl", "http://localhost:3000");
     }
@@ -277,6 +280,82 @@ class UsuarioServiceTest {
                     .satisfies(e -> assertThat(((CustomAppException) e).getHttpStatus())
                             .isEqualTo(HttpStatus.BAD_REQUEST));
             verify(emailService, never()).sendHtmlEmailAsync(anyString(), anyString(), anyString());
+        }
+    }
+
+    @Nested
+    @DisplayName("resetPassword: el token se puede usar una sola vez")
+    class ResetPassword {
+
+        private PasswordResetToken token(String token, String email, boolean used, boolean expirado) {
+            PasswordResetToken t = new PasswordResetToken(
+                    token, email, expirado ? System.currentTimeMillis() - 60_000 : System.currentTimeMillis() + 60_000);
+            t.setUsed(used);
+            return t;
+        }
+
+        @Test
+        @DisplayName("un token ya usado se rechaza: no se puede reutilizar")
+        void tokenUsadoSeRechaza() {
+            when(passwordResetTokenRepository.findByToken("t")).thenReturn(
+                    token("t", "yo@test.com", true, false));
+            when(jwtService.extractEmail("t")).thenReturn("yo@test.com");
+
+            assertThatThrownBy(() -> usuarioService.resetPassword(
+                    new ResetPasswordRequestDTO("Nueva1234", "t")))
+                    .isInstanceOf(CustomAppException.class)
+                    .satisfies(e -> assertThat(((CustomAppException) e).getHttpStatus())
+                            .isEqualTo(HttpStatus.BAD_REQUEST));
+            verify(userRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("un token vencido se rechaza")
+        void tokenVencidoSeRechaza() {
+            when(passwordResetTokenRepository.findByToken("t")).thenReturn(
+                    token("t", "yo@test.com", false, true));
+            when(jwtService.extractEmail("t")).thenReturn("yo@test.com");
+
+            assertThatThrownBy(() -> usuarioService.resetPassword(
+                    new ResetPasswordRequestDTO("Nueva1234", "t")))
+                    .isInstanceOf(CustomAppException.class)
+                    .satisfies(e -> assertThat(((CustomAppException) e).getHttpStatus())
+                            .isEqualTo(HttpStatus.BAD_REQUEST));
+            verify(userRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("un token cuyo email no coincide con el del JWT se rechaza")
+        void tokenDeOtroEmailSeRechaza() {
+            when(passwordResetTokenRepository.findByToken("t")).thenReturn(
+                    token("t", "otro@test.com", false, false));
+            when(jwtService.extractEmail("t")).thenReturn("yo@test.com");
+
+            assertThatThrownBy(() -> usuarioService.resetPassword(
+                    new ResetPasswordRequestDTO("Nueva1234", "t")))
+                    .isInstanceOf(CustomAppException.class)
+                    .satisfies(e -> assertThat(((CustomAppException) e).getHttpStatus())
+                            .isEqualTo(HttpStatus.BAD_REQUEST));
+            verify(userRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("un token valido resetea la contraseña, revoca refreshes y se marca usado")
+        void tokenValidoResetea() {
+            User target = user("yo@test.com", Rol.USER);
+            PasswordResetToken t = token("t", "yo@test.com", false, false);
+            when(passwordResetTokenRepository.findByToken("t")).thenReturn(t);
+            when(jwtService.extractEmail("t")).thenReturn("yo@test.com");
+            when(userRepository.findByEmail("yo@test.com")).thenReturn(target);
+            when(passwordEncoder.encode("Nueva1234")).thenReturn("hash-nuevo");
+
+            usuarioService.resetPassword(new ResetPasswordRequestDTO("Nueva1234", "t"));
+
+            assertThat(target.getPassword()).isEqualTo("hash-nuevo");
+            assertThat(t.isUsed()).isTrue();
+            verify(jwtService).revokeAllRefreshTokensForUser(target);
+            verify(userRepository).save(target);
+            verify(passwordResetTokenRepository).save(t);
         }
     }
 }

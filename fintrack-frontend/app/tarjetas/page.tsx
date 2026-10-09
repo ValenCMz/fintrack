@@ -2,54 +2,34 @@
 
 import { useEffect, useState } from "react";
 import MainLayout from "@/app/components/layout/MainLayout";
+import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
+import CardFormDialog from "@/app/components/forms/CardFormDialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { CreditCard, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api, Card } from "@/lib/api";
-import { formatMoney, formatDate, todayISO } from "@/lib/format";
+import { formatMoney, formatDate } from "@/lib/format";
 
 export default function TarjetasPage() {
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const [holderName, setHolderName] = useState("");
-  const [dueDay, setDueDay] = useState(todayISO());
-  const [amount, setAmount] = useState("");
 
   async function load() {
     setCards(await api.listCards());
   }
 
   useEffect(() => {
-    load()
-      .catch((e) => toast.error(e instanceof Error ? e.message : "Error"))
-      .finally(() => setLoading(false));
+    (async () => {
+      try {
+        await load();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Error");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await api.createCard({
-        holderName,
-        dueDay,
-        amount: Number(amount),
-        active: true,
-      });
-      await load();
-      setHolderName("");
-      setAmount("");
-      setShowForm(false);
-      toast.success("Tarjeta creada");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al guardar");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleDelete(id: string) {
     try {
@@ -73,48 +53,17 @@ export default function TarjetasPage() {
             <p className="text-muted-foreground">Administrá tus tarjetas de crédito</p>
           </div>
         </div>
-        <Button onClick={() => setShowForm((v) => !v)}>
+        <Button onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Nueva tarjeta
         </Button>
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleCreate}
-          className="card-gradient rounded-xl p-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4"
-        >
-          <Input
-            placeholder="Titular"
-            value={holderName}
-            onChange={(e) => setHolderName(e.target.value)}
-            required
-          />
-          <Input
-            type="date"
-            value={dueDay}
-            onChange={(e) => setDueDay(e.target.value)}
-            required
-          />
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Monto a pagar"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-          />
-          <div className="md:col-span-3 flex gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      )}
+      <CardFormDialog
+        open={showForm}
+        onOpenChange={setShowForm}
+        onCreated={load}
+      />
 
       <div className="card-gradient rounded-xl p-5">
         {loading ? (
@@ -138,12 +87,13 @@ export default function TarjetasPage() {
                   <p className="font-display font-semibold text-expense">
                     {formatMoney(c.amount)}
                   </p>
-                  <button
-                    onClick={() => handleDelete(c.id)}
+                  <ConfirmDeleteButton
+                    onConfirm={() => handleDelete(c.id)}
+                    title="¿Eliminar tarjeta?"
                     className="text-xs text-muted-foreground hover:text-expense"
                   >
                     Eliminar
-                  </button>
+                  </ConfirmDeleteButton>
                 </div>
               </div>
             ))}

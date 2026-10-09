@@ -5,10 +5,12 @@ import java.time.LocalDate;
 
 import com.valencmz.fintrack.model.entity.SavingGoal;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,12 +20,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SavingGoalRequest {
     @NotBlank
+    @Size(max = 120)
     private String name;
     @NotNull
     @Positive
+    @Digits(integer = 36, fraction = 2)
     private BigDecimal targetAmount;
     @NotNull
     @PositiveOrZero
+    @Digits(integer = 36, fraction = 2)
     private BigDecimal currentAmount;
     @NotNull
     private LocalDate targetDate;

@@ -2,57 +2,34 @@
 
 import { useEffect, useState } from "react";
 import MainLayout from "@/app/components/layout/MainLayout";
+import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
+import SavingGoalFormDialog from "@/app/components/forms/SavingGoalFormDialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { PiggyBank, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api, SavingGoal } from "@/lib/api";
-import { formatMoney, formatDate, todayISO } from "@/lib/format";
+import { formatMoney, formatDate } from "@/lib/format";
 
 export default function AhorrosPage() {
   const [goals, setGoals] = useState<SavingGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const [name, setName] = useState("");
-  const [targetAmount, setTargetAmount] = useState("");
-  const [currentAmount, setCurrentAmount] = useState("");
-  const [targetDate, setTargetDate] = useState(todayISO());
 
   async function load() {
     setGoals(await api.listSavingGoals());
   }
 
   useEffect(() => {
-    load()
-      .catch((e) => toast.error(e instanceof Error ? e.message : "Error"))
-      .finally(() => setLoading(false));
+    (async () => {
+      try {
+        await load();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Error");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await api.createSavingGoal({
-        name,
-        targetAmount: Number(targetAmount),
-        currentAmount: Number(currentAmount || 0),
-        targetDate,
-        active: true,
-      });
-      await load();
-      setName("");
-      setTargetAmount("");
-      setCurrentAmount("");
-      setShowForm(false);
-      toast.success("Meta creada");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al guardar");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleDelete(id: string) {
     try {
@@ -76,56 +53,17 @@ export default function AhorrosPage() {
             <p className="text-muted-foreground">Definí objetivos y seguí tu progreso</p>
           </div>
         </div>
-        <Button onClick={() => setShowForm((v) => !v)}>
+        <Button onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Nueva meta
         </Button>
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleCreate}
-          className="card-gradient rounded-xl p-6 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-          <Input
-            placeholder="Nombre"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <Input
-            type="date"
-            value={targetDate}
-            onChange={(e) => setTargetDate(e.target.value)}
-            required
-          />
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Objetivo"
-            value={targetAmount}
-            onChange={(e) => setTargetAmount(e.target.value)}
-            required
-          />
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Ahorrado hasta ahora"
-            value={currentAmount}
-            onChange={(e) => setCurrentAmount(e.target.value)}
-          />
-          <div className="md:col-span-2 flex gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      )}
+      <SavingGoalFormDialog
+        open={showForm}
+        onOpenChange={setShowForm}
+        onCreated={load}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {loading ? (
@@ -158,12 +96,13 @@ export default function AhorrosPage() {
                   <span className="text-muted-foreground">
                     {formatMoney(g.currentAmount)} de {formatMoney(g.targetAmount)}
                   </span>
-                  <button
-                    onClick={() => handleDelete(g.id)}
+                  <ConfirmDeleteButton
+                    onConfirm={() => handleDelete(g.id)}
+                    title="¿Eliminar meta de ahorro?"
                     className="text-xs text-muted-foreground hover:text-expense"
                   >
                     Eliminar
-                  </button>
+                  </ConfirmDeleteButton>
                 </div>
               </div>
             );
