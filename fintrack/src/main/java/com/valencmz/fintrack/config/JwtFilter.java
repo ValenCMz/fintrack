@@ -40,8 +40,9 @@ public class JwtFilter extends OncePerRequestFilter {
         String ctx = request.getContextPath(); // ej: /api
         String p = (ctx == null ? "" : ctx);
 
-        // Público: auth + swagger (respetando context-path)
+        // Público: auth + swagger + health (respetando context-path)
         if (uri.startsWith(p + "/auth")
+                || uri.startsWith(p + "/actuator/health")
                 || uri.startsWith(p + "/swagger-ui")
                 || uri.equals(p + "/swagger-ui.html")
                 || uri.startsWith(p + "/v3/api-docs")) {
