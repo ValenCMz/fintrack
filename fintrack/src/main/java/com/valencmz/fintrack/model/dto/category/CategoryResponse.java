@@ -17,6 +17,7 @@ public class CategoryResponse {
     private String color;
     private CategoryType type;
     private boolean active;
+    private boolean global;
 
     public CategoryResponse(com.valencmz.fintrack.model.entity.Category category) {
         this.id = category.getId();
@@ -24,5 +25,6 @@ public class CategoryResponse {
         this.color = category.getColor();
         this.type = category.getType();
         this.active = category.isActive();
+        this.global = category.isGlobal();
     }
 }

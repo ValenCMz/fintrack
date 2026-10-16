@@ -191,22 +191,28 @@ export default function CategoriasPage() {
                       />
                       <p className="font-medium">{c.name}</p>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => startEdit(c)}
-                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                      >
-                        <Pencil className="w-3 h-3" />
-                        Editar
-                      </button>
-                      <ConfirmDeleteButton
-                        onConfirm={() => handleDelete(c.id)}
-                        title="¿Eliminar categoría?"
-                        className="text-xs text-muted-foreground hover:text-expense"
-                      >
-                        Eliminar
-                      </ConfirmDeleteButton>
-                    </div>
+                    {c.global ? (
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-secondary px-2 py-1 rounded-full">
+                        Por defecto
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={() => startEdit(c)}
+                          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          Editar
+                        </button>
+                        <ConfirmDeleteButton
+                          onConfirm={() => handleDelete(c.id)}
+                          title="¿Eliminar categoría?"
+                          className="text-xs text-muted-foreground hover:text-expense"
+                        >
+                          Eliminar
+                        </ConfirmDeleteButton>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

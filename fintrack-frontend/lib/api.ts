@@ -120,6 +120,7 @@ export interface Category {
   color: string;
   type: CategoryType;
   active: boolean;
+  global: boolean;
 }
 
 export interface Transaction {

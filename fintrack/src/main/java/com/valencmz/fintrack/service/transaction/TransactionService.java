@@ -43,7 +43,7 @@ public class TransactionService {
 
     public TransactionResponse create(TransactionRequest request, UserAuth userAuth) {
         UUID userId = userAuth.getUser().getId();
-        Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
+        Category category = categoryRepository.findVisibleById(request.getCategoryId(), userId)
                 .orElseThrow(() -> new CustomAppException("Category not found", HttpStatus.NOT_FOUND));
         Account account = accountRepository.findByIdAndUserId(request.getAccountId(), userId)
                 .orElseThrow(() -> new CustomAppException("Account not found", HttpStatus.NOT_FOUND));
@@ -63,7 +63,7 @@ public class TransactionService {
     public TransactionResponse update(UUID id, TransactionRequest request, UserAuth userAuth) {
         UUID userId = userAuth.getUser().getId();
         Transaction transaction = findOwnedTransaction(id, userId);
-        Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
+        Category category = categoryRepository.findVisibleById(request.getCategoryId(), userId)
                 .orElseThrow(() -> new CustomAppException("Category not found", HttpStatus.NOT_FOUND));
         Account account = accountRepository.findByIdAndUserId(request.getAccountId(), userId)
                 .orElseThrow(() -> new CustomAppException("Account not found", HttpStatus.NOT_FOUND));

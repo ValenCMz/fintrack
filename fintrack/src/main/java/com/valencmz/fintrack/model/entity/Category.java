@@ -40,7 +40,13 @@ public class Category {
     // user
     // a user can have many categories, but a category can belong to only one
     // user.
+    // user == null means the category is a global default (not editable nor
+    // deletable by users).
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
+
+    public boolean isGlobal() {
+        return user == null;
+    }
 }

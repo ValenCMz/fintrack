@@ -39,7 +39,7 @@ public class FixedExpendeService {
 
     public FixedExpendeResponse create(FixedExpendeRequest request, UserAuth userAuth) {
         UUID userId = userAuth.getUser().getId();
-        Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
+        Category category = categoryRepository.findVisibleById(request.getCategoryId(), userId)
                 .orElseThrow(() -> new CustomAppException("Category not found", HttpStatus.NOT_FOUND));
         Account account = accountRepository.findByIdAndUserId(request.getAccountId(), userId)
                 .orElseThrow(() -> new CustomAppException("Account not found", HttpStatus.NOT_FOUND));
@@ -59,7 +59,7 @@ public class FixedExpendeService {
     public FixedExpendeResponse update(UUID id, FixedExpendeRequest request, UserAuth userAuth) {
         UUID userId = userAuth.getUser().getId();
         FixedExpende fixedExpende = findOwnedFixedExpende(id, userId);
-        Category category = categoryRepository.findByIdAndUserId(request.getCategoryId(), userId)
+        Category category = categoryRepository.findVisibleById(request.getCategoryId(), userId)
                 .orElseThrow(() -> new CustomAppException("Category not found", HttpStatus.NOT_FOUND));
         Account account = accountRepository.findByIdAndUserId(request.getAccountId(), userId)
                 .orElseThrow(() -> new CustomAppException("Account not found", HttpStatus.NOT_FOUND));

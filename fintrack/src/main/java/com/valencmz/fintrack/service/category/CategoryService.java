@@ -21,12 +21,12 @@ public class CategoryService {
     private CategoryRepository categoryRepository;
 
     public List<CategoryResponse> getByUser(UserAuth userAuth) {
-        return categoryRepository.findByUserIdAndActive(userAuth.getUser().getId(), true)
+        return categoryRepository.findAvailableForUser(userAuth.getUser().getId())
                 .stream().map(CategoryResponse::new).toList();
     }
 
     public CategoryResponse getById(UUID id, UserAuth userAuth) {
-        return new CategoryResponse(categoryRepository.findByIdAndUserId(id, userAuth.getUser().getId())
+        return new CategoryResponse(categoryRepository.findVisibleById(id, userAuth.getUser().getId())
                 .orElseThrow(() -> new CustomAppException("Category not found", HttpStatus.NOT_FOUND)));
     }
 
@@ -37,8 +37,7 @@ public class CategoryService {
     }
 
     public CategoryResponse update(UUID id, CategoryRequest category, UserAuth userAuth) {
-        Category existingCategory = categoryRepository.findByIdAndUserId(id, userAuth.getUser().getId())
-                .orElseThrow(() -> new CustomAppException("Category not found", HttpStatus.NOT_FOUND));
+        Category existingCategory = findOwnedOrFail(id, userAuth);
         existingCategory.setName(category.getName());
         existingCategory.setColor(category.getColor());
         existingCategory.setType(category.getType());
@@ -47,10 +46,22 @@ public class CategoryService {
     }
 
     public void softDelete(UUID id, UserAuth userAuth) {
-        Category existingCategory = categoryRepository.findByIdAndUserId(id, userAuth.getUser().getId())
-                .orElseThrow(() -> new CustomAppException("Category not found", HttpStatus.NOT_FOUND));
+        Category existingCategory = findOwnedOrFail(id, userAuth);
         existingCategory.setActive(false);
         categoryRepository.save(existingCategory);
     }
 
+    private Category findOwnedOrFail(UUID id, UserAuth userAuth) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new CustomAppException("Category not found", HttpStatus.NOT_FOUND));
+
+        if (category.isGlobal()) {
+            throw new CustomAppException("No podés modificar una categoría por defecto", HttpStatus.FORBIDDEN);
+        }
+
+        if (!category.getUser().getId().equals(userAuth.getUser().getId())) {
+            throw new CustomAppException("Category not found", HttpStatus.NOT_FOUND);
+        }
+        return category;
+    }
 }

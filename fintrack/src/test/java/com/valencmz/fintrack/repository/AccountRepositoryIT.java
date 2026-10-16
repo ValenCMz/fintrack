@@ -168,9 +168,44 @@ class AccountRepositoryIT {
         inactiva.setUser(user);
         categoryRepository.saveAndFlush(inactiva);
 
-        assertThat(categoryRepository.findByUserIdAndActive(user.getId(), true))
+        assertThat(categoryRepository.findAvailableForUser(user.getId()))
                 .hasSize(1)
                 .allSatisfy(c -> assertThat(c.isActive()).isTrue());
+    }
+
+    @Test
+    @DisplayName("findAvailableForUser devuelve globales + propias activas, sin duplicados ni ajenas")
+    void elListadoDeCategoriasIncluyeGlobalesYPropias() {
+        User user = user();
+
+        Category propia = new Category();
+        propia.setName("Propia");
+        propia.setColor("#111111");
+        propia.setType(CategoryType.EXPENSE);
+        propia.setActive(true);
+        propia.setUser(user);
+        categoryRepository.saveAndFlush(propia);
+
+        Category global = new Category();
+        global.setName("Global");
+        global.setColor("#222222");
+        global.setType(CategoryType.INCOME);
+        global.setActive(true);
+        global.setUser(null);
+        categoryRepository.saveAndFlush(global);
+
+        User otro = user();
+        Category ajena = new Category();
+        ajena.setName("Ajena");
+        ajena.setColor("#333333");
+        ajena.setType(CategoryType.EXPENSE);
+        ajena.setActive(true);
+        ajena.setUser(otro);
+        categoryRepository.saveAndFlush(ajena);
+
+        assertThat(categoryRepository.findAvailableForUser(user.getId()))
+                .extracting(Category::getName)
+                .containsExactlyInAnyOrder("Propia", "Global");
     }
 
     @Test
