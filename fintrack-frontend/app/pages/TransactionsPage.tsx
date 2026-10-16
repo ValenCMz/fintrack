@@ -24,6 +24,7 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Transaction | null>(null);
 
   const load = useCallback(async () => {
     const [tx, acc, cat] = await Promise.all([
@@ -58,6 +59,16 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
     }
   }
 
+  function openCreate() {
+    setEditing(null);
+    setShowForm(true);
+  }
+
+  function openEdit(transaction: Transaction) {
+    setEditing(transaction);
+    setShowForm(true);
+  }
+
   const totalAmount = transactions.reduce((s, t) => s + Number(t.amount), 0);
 
   return (
@@ -84,7 +95,7 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
         </div>
         <Button
           className={isIncome ? "bg-income hover:bg-income/90" : "bg-expense hover:bg-expense/90"}
-          onClick={() => setShowForm(true)}
+          onClick={openCreate}
         >
           <Plus className="w-4 h-4 mr-2" />
           Nuevo {isIncome ? "Ingreso" : "Gasto"}
@@ -118,8 +129,12 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
       <TransactionFormDialog
         type={type}
         open={showForm}
-        onOpenChange={setShowForm}
+        onOpenChange={(v) => {
+          setShowForm(v);
+          if (!v) setEditing(null);
+        }}
         onCreated={load}
+        transaction={editing}
       />
 
       <div className="card-gradient rounded-xl p-6 mb-6 animate-slide-up">
@@ -161,6 +176,7 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
                 date={t.date}
                 account={t.accountName ?? "—"}
                 onDelete={() => handleDelete(t.id)}
+                onEdit={() => openEdit(t)}
               />
             ))}
           </div>

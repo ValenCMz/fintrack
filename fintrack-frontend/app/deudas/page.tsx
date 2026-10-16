@@ -22,6 +22,7 @@ export default function DeudasPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<Debt | null>(null);
 
   const [creditor, setCreditor] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
@@ -38,23 +39,51 @@ export default function DeudasPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleCreate(e: React.FormEvent) {
+  function openCreate() {
+    setEditing(null);
+    setCreditor("");
+    setTotalAmount("");
+    setRemainingAmount("");
+    setStartDate(todayISO());
+    setShowForm(true);
+  }
+
+  function openEdit(debt: Debt) {
+    setEditing(debt);
+    setCreditor(debt.creditor);
+    setTotalAmount(String(debt.totalAmount));
+    setRemainingAmount(String(debt.remainingAmount));
+    setStartDate(debt.startDate);
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setEditing(null);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.createDebt({
+      const payload = {
         creditor,
         totalAmount: Number(totalAmount),
         remainingAmount: Number(remainingAmount),
         startDate,
-        status: "ACTIVE",
-      });
+        status: editing?.status ?? "ACTIVE",
+      };
+      if (editing) {
+        await api.updateDebt(editing.id, payload);
+      } else {
+        await api.createDebt(payload);
+      }
       await load();
+      closeForm();
       setCreditor("");
       setTotalAmount("");
       setRemainingAmount("");
-      setShowForm(false);
-      toast.success("Deuda registrada");
+      toast.success(editing ? "Deuda actualizada" : "Deuda registrada");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al guardar");
     } finally {
@@ -102,19 +131,25 @@ export default function DeudasPage() {
             <p className="text-muted-foreground">Registrá y seguí tus deudas</p>
           </div>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={openCreate}>
           <Plus className="w-4 h-4 mr-2" />
           Nueva deuda
         </Button>
       </div>
 
-      <Dialog open={showForm} onOpenChange={setShowForm}>
+      <Dialog
+        open={showForm}
+        onOpenChange={(v) => {
+          setShowForm(v);
+          if (!v) setEditing(null);
+        }}
+      >
         <DialogContent aria-describedby={undefined}>
           <DialogHeader>
-            <DialogTitle>Nueva deuda</DialogTitle>
+            <DialogTitle>{editing ? "Editar deuda" : "Nueva deuda"}</DialogTitle>
           </DialogHeader>
           <form
-            onSubmit={handleCreate}
+            onSubmit={handleSubmit}
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
             <Input
@@ -151,7 +186,7 @@ export default function DeudasPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowForm(false)}
+                onClick={closeForm}
               >
                 Cancelar
               </Button>
@@ -199,6 +234,12 @@ export default function DeudasPage() {
                       Marcar pagada
                     </button>
                   )}
+                  <button
+                    onClick={() => openEdit(d)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Editar
+                  </button>
                   <ConfirmDeleteButton
                     onConfirm={() => handleDelete(d.id)}
                     title="¿Eliminar deuda?"

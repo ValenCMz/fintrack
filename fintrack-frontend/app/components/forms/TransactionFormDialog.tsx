@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { api, Account, Category, TransactionRequest } from "@/lib/api";
+import { api, Account, Category, Transaction, TransactionRequest } from "@/lib/api";
 import { todayISO } from "@/lib/format";
 
 interface TransactionFormDialogProps {
@@ -19,6 +19,7 @@ interface TransactionFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: () => void | Promise<void>;
+  transaction?: Transaction | null;
 }
 
 const TransactionFormDialog = ({
@@ -26,9 +27,11 @@ const TransactionFormDialog = ({
   open,
   onOpenChange,
   onCreated,
+  transaction,
 }: TransactionFormDialogProps) => {
   const isIncome = type === "income";
   const backendType = isIncome ? "INCOME" : "EXPENSE";
+  const isEditing = !!transaction;
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -45,13 +48,40 @@ const TransactionFormDialog = ({
     let cancelled = false;
     (async () => {
       try {
-        const [acc, cat] = await Promise.all([
+        const [allAccounts, allCategories] = await Promise.all([
           api.listAccounts(),
           api.listCategories(),
         ]);
         if (cancelled) return;
-        setAccounts(acc.filter((a) => a.active));
-        setCategories(cat.filter((c) => c.type === backendType));
+
+        let accountOptions = allAccounts.filter((a) => a.active);
+        let categoryOptions = allCategories.filter((c) => c.type === backendType);
+
+        if (transaction) {
+          if (
+            transaction.accountId &&
+            !accountOptions.some((a) => a.id === transaction.accountId)
+          ) {
+            const current = allAccounts.find((a) => a.id === transaction.accountId);
+            if (current) accountOptions = [...accountOptions, current];
+          }
+          if (
+            transaction.categoryId &&
+            !categoryOptions.some((c) => c.id === transaction.categoryId)
+          ) {
+            const current = allCategories.find((c) => c.id === transaction.categoryId);
+            if (current) categoryOptions = [...categoryOptions, current];
+          }
+
+          setDescription(transaction.description ?? "");
+          setAmount(String(transaction.amount));
+          setDate(transaction.date);
+          setAccountId(transaction.accountId ?? "");
+          setCategoryId(transaction.categoryId ?? "");
+        }
+
+        setAccounts(accountOptions);
+        setCategories(categoryOptions);
       } catch {
         // los errores de auth ya redirigen
       }
@@ -59,7 +89,7 @@ const TransactionFormDialog = ({
     return () => {
       cancelled = true;
     };
-  }, [open, backendType]);
+  }, [open, backendType, transaction]);
 
   function reset() {
     setDescription("");
@@ -85,9 +115,21 @@ const TransactionFormDialog = ({
         categoryId,
         accountId,
       };
-      await api.createTransaction(payload);
+      if (isEditing && transaction) {
+        await api.updateTransaction(transaction.id, payload);
+      } else {
+        await api.createTransaction(payload);
+      }
       await onCreated?.();
-      toast.success(isIncome ? "Ingreso registrado" : "Gasto registrado");
+      toast.success(
+        isEditing
+          ? isIncome
+            ? "Ingreso actualizado"
+            : "Gasto actualizado"
+          : isIncome
+            ? "Ingreso registrado"
+            : "Gasto registrado"
+      );
       reset();
       onOpenChange(false);
     } catch (e) {
@@ -101,7 +143,9 @@ const TransactionFormDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl" aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle>Nuevo {isIncome ? "ingreso" : "gasto"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Editar" : "Nuevo"} {isIncome ? "ingreso" : "gasto"}
+          </DialogTitle>
         </DialogHeader>
         <form
           onSubmit={handleSubmit}

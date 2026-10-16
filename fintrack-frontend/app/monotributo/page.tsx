@@ -22,6 +22,7 @@ export default function MonotributoPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<Monotributo | null>(null);
 
   const [name, setName] = useState("");
   const [monthlyAmount, setMonthlyAmount] = useState("");
@@ -37,21 +38,47 @@ export default function MonotributoPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleCreate(e: React.FormEvent) {
+  function openCreate() {
+    setEditing(null);
+    setName("");
+    setMonthlyAmount("");
+    setDueDay(todayISO());
+    setShowForm(true);
+  }
+
+  function openEdit(item: Monotributo) {
+    setEditing(item);
+    setName(item.name);
+    setMonthlyAmount(String(item.monthlyAmount));
+    setDueDay(item.dueDay);
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setEditing(null);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.createMonotributo({
+      const payload = {
         name,
         monthlyAmount: Number(monthlyAmount),
         dueDay,
-        status: "UP_TO_DATE",
-      });
+        status: editing?.status ?? "UP_TO_DATE",
+      };
+      if (editing) {
+        await api.updateMonotributo(editing.id, payload);
+      } else {
+        await api.createMonotributo(payload);
+      }
       await load();
+      closeForm();
       setName("");
       setMonthlyAmount("");
-      setShowForm(false);
-      toast.success("Monotributo registrado");
+      toast.success(editing ? "Monotributo actualizado" : "Monotributo registrado");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al guardar");
     } finally {
@@ -81,19 +108,27 @@ export default function MonotributoPage() {
             <p className="text-muted-foreground">Controlá tus pagos de monotributo</p>
           </div>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={openCreate}>
           <Plus className="w-4 h-4 mr-2" />
           Nuevo
         </Button>
       </div>
 
-      <Dialog open={showForm} onOpenChange={setShowForm}>
+      <Dialog
+        open={showForm}
+        onOpenChange={(v) => {
+          setShowForm(v);
+          if (!v) setEditing(null);
+        }}
+      >
         <DialogContent aria-describedby={undefined}>
           <DialogHeader>
-            <DialogTitle>Nuevo monotributo</DialogTitle>
+            <DialogTitle>
+              {editing ? "Editar monotributo" : "Nuevo monotributo"}
+            </DialogTitle>
           </DialogHeader>
           <form
-            onSubmit={handleCreate}
+            onSubmit={handleSubmit}
             className="grid grid-cols-1 md:grid-cols-3 gap-4"
           >
             <Input
@@ -121,7 +156,7 @@ export default function MonotributoPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowForm(false)}
+                onClick={closeForm}
               >
                 Cancelar
               </Button>
@@ -156,6 +191,12 @@ export default function MonotributoPage() {
                   <p className="font-display font-semibold">
                     {formatMoney(m.monthlyAmount)}
                   </p>
+                  <button
+                    onClick={() => openEdit(m)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Editar
+                  </button>
                   <ConfirmDeleteButton
                     onConfirm={() => handleDelete(m.id)}
                     title="¿Eliminar monotributo?"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,26 +11,44 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { api, SavingGoal } from "@/lib/api";
 import { todayISO } from "@/lib/format";
 
 interface SavingGoalFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: () => void | Promise<void>;
+  goal?: SavingGoal | null;
 }
 
 const SavingGoalFormDialog = ({
   open,
   onOpenChange,
   onCreated,
+  goal,
 }: SavingGoalFormDialogProps) => {
+  const isEditing = !!goal;
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState("");
   const [targetDate, setTargetDate] = useState(todayISO());
   const [targetAmount, setTargetAmount] = useState("");
   const [currentAmount, setCurrentAmount] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    if (goal) {
+      setName(goal.name);
+      setTargetDate(goal.targetDate);
+      setTargetAmount(String(goal.targetAmount));
+      setCurrentAmount(String(goal.currentAmount));
+    } else {
+      setName("");
+      setTargetDate(todayISO());
+      setTargetAmount("");
+      setCurrentAmount("");
+    }
+  }, [open, goal]);
 
   function reset() {
     setName("");
@@ -43,15 +61,20 @@ const SavingGoalFormDialog = ({
     e.preventDefault();
     setSaving(true);
     try {
-      await api.createSavingGoal({
+      const payload = {
         name,
         targetAmount: Number(targetAmount),
         currentAmount: Number(currentAmount || 0),
         targetDate,
-        active: true,
-      });
+        active: goal?.active ?? true,
+      };
+      if (isEditing && goal) {
+        await api.updateSavingGoal(goal.id, payload);
+      } else {
+        await api.createSavingGoal(payload);
+      }
       await onCreated?.();
-      toast.success("Meta creada");
+      toast.success(isEditing ? "Meta actualizada" : "Meta creada");
       reset();
       onOpenChange(false);
     } catch (err) {
@@ -65,7 +88,9 @@ const SavingGoalFormDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle>Nueva meta de ahorro</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Editar meta de ahorro" : "Nueva meta de ahorro"}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
           <Input

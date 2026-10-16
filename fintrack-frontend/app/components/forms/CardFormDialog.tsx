@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,25 +11,41 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { api, Card } from "@/lib/api";
 import { todayISO } from "@/lib/format";
 
 interface CardFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: () => void | Promise<void>;
+  card?: Card | null;
 }
 
 const CardFormDialog = ({
   open,
   onOpenChange,
   onCreated,
+  card,
 }: CardFormDialogProps) => {
+  const isEditing = !!card;
   const [saving, setSaving] = useState(false);
 
   const [holderName, setHolderName] = useState("");
   const [dueDay, setDueDay] = useState(todayISO());
   const [amount, setAmount] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    if (card) {
+      setHolderName(card.holderName);
+      setDueDay(card.dueDay);
+      setAmount(String(card.amount));
+    } else {
+      setHolderName("");
+      setDueDay(todayISO());
+      setAmount("");
+    }
+  }, [open, card]);
 
   function reset() {
     setHolderName("");
@@ -41,14 +57,19 @@ const CardFormDialog = ({
     e.preventDefault();
     setSaving(true);
     try {
-      await api.createCard({
+      const payload = {
         holderName,
         dueDay,
         amount: Number(amount),
-        active: true,
-      });
+        active: card?.active ?? true,
+      };
+      if (isEditing && card) {
+        await api.updateCard(card.id, payload);
+      } else {
+        await api.createCard(payload);
+      }
       await onCreated?.();
-      toast.success("Tarjeta creada");
+      toast.success(isEditing ? "Tarjeta actualizada" : "Tarjeta creada");
       reset();
       onOpenChange(false);
     } catch (err) {
@@ -62,7 +83,7 @@ const CardFormDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle>Nueva tarjeta</DialogTitle>
+          <DialogTitle>{isEditing ? "Editar tarjeta" : "Nueva tarjeta"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
           <Input

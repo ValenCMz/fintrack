@@ -14,6 +14,7 @@ export default function TarjetasPage() {
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Card | null>(null);
 
   async function load() {
     setCards(await api.listCards());
@@ -41,6 +42,16 @@ export default function TarjetasPage() {
     }
   }
 
+  function openCreate() {
+    setEditing(null);
+    setShowForm(true);
+  }
+
+  function openEdit(card: Card) {
+    setEditing(card);
+    setShowForm(true);
+  }
+
   return (
     <MainLayout>
       <div className="flex items-center justify-between mb-8">
@@ -53,7 +64,7 @@ export default function TarjetasPage() {
             <p className="text-muted-foreground">Administrá tus tarjetas de crédito</p>
           </div>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={openCreate}>
           <Plus className="w-4 h-4 mr-2" />
           Nueva tarjeta
         </Button>
@@ -61,8 +72,12 @@ export default function TarjetasPage() {
 
       <CardFormDialog
         open={showForm}
-        onOpenChange={setShowForm}
+        onOpenChange={(v) => {
+          setShowForm(v);
+          if (!v) setEditing(null);
+        }}
         onCreated={load}
+        card={editing}
       />
 
       <div className="card-gradient rounded-xl p-5">
@@ -87,6 +102,12 @@ export default function TarjetasPage() {
                   <p className="font-display font-semibold text-expense">
                     {formatMoney(c.amount)}
                   </p>
+                  <button
+                    onClick={() => openEdit(c)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Editar
+                  </button>
                   <ConfirmDeleteButton
                     onConfirm={() => handleDelete(c.id)}
                     title="¿Eliminar tarjeta?"

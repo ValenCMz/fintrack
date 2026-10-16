@@ -1,4 +1,4 @@
-import { ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMoney, formatDate } from "@/lib/format";
 import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
@@ -11,6 +11,7 @@ interface TransactionItemProps {
   date: string;
   account: string;
   onDelete?: () => void;
+  onEdit?: () => void;
 }
 
 const TransactionItem = ({
@@ -21,6 +22,7 @@ const TransactionItem = ({
   date,
   account,
   onDelete,
+  onEdit,
 }: TransactionItemProps) => {
   const isIncome = type === "income";
 
@@ -60,6 +62,17 @@ const TransactionItem = ({
         </p>
         <p className="text-xs text-muted-foreground">{formatDate(date)}</p>
       </div>
+
+      {onEdit && (
+        <button
+          onClick={onEdit}
+          title="Editar movimiento"
+          aria-label="Editar movimiento"
+          className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+      )}
 
       {onDelete && (
         <ConfirmDeleteButton

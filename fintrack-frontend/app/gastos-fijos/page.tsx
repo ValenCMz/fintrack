@@ -25,6 +25,7 @@ export default function GastosFijosPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<FixedExpense | null>(null);
 
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -50,7 +51,34 @@ export default function GastosFijosPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleCreate(e: React.FormEvent) {
+  function openCreate() {
+    setEditing(null);
+    setName("");
+    setAmount("");
+    setDueDay(todayISO());
+    setFrequency("mensual");
+    setAccountId("");
+    setCategoryId("");
+    setShowForm(true);
+  }
+
+  function openEdit(item: FixedExpense) {
+    setEditing(item);
+    setName(item.name);
+    setAmount(String(item.amount));
+    setDueDay(item.dueDay);
+    setFrequency(item.frequency ?? "mensual");
+    setAccountId(item.accountId ?? "");
+    setCategoryId(item.categoryId ?? "");
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setEditing(null);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!accountId || !categoryId) {
       toast.error("Seleccioná cuenta y categoría");
@@ -58,20 +86,25 @@ export default function GastosFijosPage() {
     }
     setSaving(true);
     try {
-      await api.createFixedExpense({
+      const payload = {
         name,
         amount: Number(amount),
         dueDay,
         frequency,
-        active: true,
+        active: editing?.active ?? true,
         accountId,
         categoryId,
-      });
+      };
+      if (editing) {
+        await api.updateFixedExpense(editing.id, payload);
+      } else {
+        await api.createFixedExpense(payload);
+      }
       await load();
+      closeForm();
       setName("");
       setAmount("");
-      setShowForm(false);
-      toast.success("Gasto fijo creado");
+      toast.success(editing ? "Gasto fijo actualizado" : "Gasto fijo creado");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al guardar");
     } finally {
@@ -101,9 +134,9 @@ export default function GastosFijosPage() {
             <p className="text-muted-foreground">Gestioná tus pagos recurrentes</p>
           </div>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={openCreate}>
           <Plus className="w-4 h-4 mr-2" />
-          Nuevo gasto fijo
+          Nuevo
         </Button>
       </div>
 
@@ -131,13 +164,21 @@ export default function GastosFijosPage() {
         </div>
       )}
 
-      <Dialog open={showForm} onOpenChange={setShowForm}>
+      <Dialog
+        open={showForm}
+        onOpenChange={(v) => {
+          setShowForm(v);
+          if (!v) setEditing(null);
+        }}
+      >
         <DialogContent aria-describedby={undefined}>
           <DialogHeader>
-            <DialogTitle>Nuevo gasto fijo</DialogTitle>
+            <DialogTitle>
+              {editing ? "Editar gasto fijo" : "Nuevo gasto fijo"}
+            </DialogTitle>
           </DialogHeader>
           <form
-            onSubmit={handleCreate}
+            onSubmit={handleSubmit}
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
             <Input
@@ -196,7 +237,7 @@ export default function GastosFijosPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowForm(false)}
+                onClick={closeForm}
               >
                 Cancelar
               </Button>
@@ -230,6 +271,12 @@ export default function GastosFijosPage() {
                   <p className="font-display font-semibold text-expense">
                     {formatMoney(f.amount)}
                   </p>
+                  <button
+                    onClick={() => openEdit(f)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Editar
+                  </button>
                   <ConfirmDeleteButton
                     onConfirm={() => handleDelete(f.id)}
                     title="¿Eliminar gasto fijo?"

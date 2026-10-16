@@ -19,7 +19,9 @@ public class FixedExpendeResponse {
     private String frequency;
     private boolean active;
     private String categoryName;
+    private UUID categoryId;
     private String accountName;
+    private UUID accountId;
 
     public FixedExpendeResponse(com.valencmz.fintrack.model.entity.FixedExpende fixedExpende) {
         this.id = fixedExpende.getId();
@@ -29,6 +31,8 @@ public class FixedExpendeResponse {
         this.frequency = fixedExpende.getFrequency();
         this.active = fixedExpende.isActive();
         this.categoryName = fixedExpende.getCategory() != null ? fixedExpende.getCategory().getName() : null;
+        this.categoryId = fixedExpende.getCategory() != null ? fixedExpende.getCategory().getId() : null;
         this.accountName = fixedExpende.getAccount() != null ? fixedExpende.getAccount().getName() : null;
+        this.accountId = fixedExpende.getAccount() != null ? fixedExpende.getAccount().getId() : null;
     }
 }

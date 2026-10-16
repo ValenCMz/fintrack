@@ -21,7 +21,9 @@ public class TransactionResponse {
     private LocalDate date;
     private String notes;
     private String categoryName;
+    private UUID categoryId;
     private String accountName;
+    private UUID accountId;
 
     public TransactionResponse(com.valencmz.fintrack.model.entity.Transaction transaction) {
         this.id = transaction.getId();
@@ -31,6 +33,8 @@ public class TransactionResponse {
         this.date = transaction.getDate();
         this.notes = transaction.getNotes();
         this.categoryName = transaction.getCategory() != null ? transaction.getCategory().getName() : null;
+        this.categoryId = transaction.getCategory() != null ? transaction.getCategory().getId() : null;
         this.accountName = transaction.getAccount() != null ? transaction.getAccount().getName() : null;
+        this.accountId = transaction.getAccount() != null ? transaction.getAccount().getId() : null;
     }
 }

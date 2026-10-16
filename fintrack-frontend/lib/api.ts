@@ -131,7 +131,9 @@ export interface Transaction {
   date: string;
   notes?: string;
   categoryName?: string;
+  categoryId?: string;
   accountName?: string;
+  accountId?: string;
 }
 
 export interface FixedExpense {
@@ -142,7 +144,9 @@ export interface FixedExpense {
   frequency?: string;
   active: boolean;
   categoryName?: string;
+  categoryId?: string;
   accountName?: string;
+  accountId?: string;
 }
 
 export interface Card {

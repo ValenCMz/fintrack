@@ -14,6 +14,7 @@ export default function AhorrosPage() {
   const [goals, setGoals] = useState<SavingGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<SavingGoal | null>(null);
 
   async function load() {
     setGoals(await api.listSavingGoals());
@@ -41,6 +42,16 @@ export default function AhorrosPage() {
     }
   }
 
+  function openCreate() {
+    setEditing(null);
+    setShowForm(true);
+  }
+
+  function openEdit(goal: SavingGoal) {
+    setEditing(goal);
+    setShowForm(true);
+  }
+
   return (
     <MainLayout>
       <div className="flex items-center justify-between mb-8">
@@ -53,7 +64,7 @@ export default function AhorrosPage() {
             <p className="text-muted-foreground">Definí objetivos y seguí tu progreso</p>
           </div>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={openCreate}>
           <Plus className="w-4 h-4 mr-2" />
           Nueva meta
         </Button>
@@ -61,8 +72,12 @@ export default function AhorrosPage() {
 
       <SavingGoalFormDialog
         open={showForm}
-        onOpenChange={setShowForm}
+        onOpenChange={(v) => {
+          setShowForm(v);
+          if (!v) setEditing(null);
+        }}
         onCreated={load}
+        goal={editing}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -96,13 +111,21 @@ export default function AhorrosPage() {
                   <span className="text-muted-foreground">
                     {formatMoney(g.currentAmount)} de {formatMoney(g.targetAmount)}
                   </span>
-                  <ConfirmDeleteButton
-                    onConfirm={() => handleDelete(g.id)}
-                    title="¿Eliminar meta de ahorro?"
-                    className="text-xs text-muted-foreground hover:text-expense"
-                  >
-                    Eliminar
-                  </ConfirmDeleteButton>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => openEdit(g)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Editar
+                    </button>
+                    <ConfirmDeleteButton
+                      onConfirm={() => handleDelete(g.id)}
+                      title="¿Eliminar meta de ahorro?"
+                      className="text-xs text-muted-foreground hover:text-expense"
+                    >
+                      Eliminar
+                    </ConfirmDeleteButton>
+                  </div>
                 </div>
               </div>
             );
