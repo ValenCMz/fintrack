@@ -1,64 +1,89 @@
 # Deuda de testing
 
-Casos que la suite actual **no** cubre, ordenados por lo que duele si se escapan.
-No es trabajo pendiente inmediato: está anotado para cuando toque.
+Estado al 2026-10-06: 4 de los 5 ítems que dolían están resueltos y verificados por
+tests. Quedan dos ítems que **no se arreglan con tests** (locking optimista) y lo que
+se decidió no cubrir.
 
-## 1. JWT y seguridad de la cadena de tokens — lo más importante
+El checklist de lo que hay que patear a mano está en `testing-manual.md`.
+La suite pasó a **127 unitarios + 6 tests de integración** (antes 86). No se rompió
+nada con el nuevo `@Digits`/`@Size`: los datos de la base y el frontend ya respetaban
+los límites, así que el `PATCH` de optimización (que actualiza los DTO a la columna)
+quedó desbloqueado.
 
-El plan de testing anunciaba `JwtServiceKeyTest` y `SecurityConfigIT`, y **nunca se
-escribieron**. Es lo más grave de esta lista porque el resto de la API depende de
-que esta parte esté bien.
+## 1. JWT y seguridad de la cadena de tokens — resuelto ✅
 
-Lo que quedó sin probar:
+El plan anunciaba `JwtServiceKeyTest` y `SecurityConfigIT` y no existían. Ahora:
 
-- `JwtService.getKey()` hace `Decoders.BASE64.decode()` y arma la clave sin validar
-  nada. Falta el test de que una clave inválida o demasiado corta falla al arrancar.
-- La expiración del access token (1 h por defecto) nunca se cruzó con el reloj.
-- El refresh token dura 30 días y se guarda hasheado con BCrypt, pero no hay test de que
-  un refresh vencido, revocado o reutilizado se rechace.
-- `generateResetToken` dura 15 minutos y su chequeo de revocación nunca se ejercitó.
-- `GET /users` con rol insuficiente da `403`, pero eso está verificado a mano con `curl`,
-  no por un test que lo proteja.
+- `JwtServiceKeyTest` (unitario, usa `SpringShell` + RSA válida en loop): arranca con
+  claves válidas, revienta el contexto con inválida y corta. Cubre también
+  separador de refresh/access, expiración y que firmar de verdad verifica.
+- `SecurityConfigIT` (Spring Security, sin Docker): `GET /users` con `USER` → `403`,
+  con `ADMIN` → `200`.
+- `RefreshTokenServiceTest`: refresh no encontrado/vencido/revocado → `401`,
+  reutilizado → rechazado y se revoca la cadena, token de otro usuario → `401`.
+- `UsuarioServiceTest` extendido: forgot password genérico y **resetPassword** (el
+  bug que quedó anotado en `endpoints.md` — token usado re-servía — quedó cerrado:
+  ver abajo).
 
-## 2. Límites de tamaño de los montos
+## 2. Límites de tamaño de los montos — resuelto ✅
 
-Las 8 columnas de dinero son `numeric(38,2)`, pero **ningún DTO tiene `@Digits`**. Un
-`amount` con más de 36 dígitos enteros revienta en la base y llega al
-`GlobalExceptionHandler` como un `DataIntegrityViolationException` sin clasificar.
+`@Digits(integer = 36, fraction = 2)` en los 8 DTOs de dinero, alineado a la
+`numeric(38,2)` real de la base. Antes un `amount` de 37 dígitos caía como `409`
+sucio del `DataIntegrityViolationException` sin clasificar; ahora es un `400` limpio
+del bean validation. Test de 3 decimales y de 37 dígitos. Un monto de 36 enteros +
+2 decimales sigue entrando (tope de la columna, verificado).
 
-Lo que falta:
+Verificado con la base que los límites viejo/nuevo son iguales: el mensaje ahora
+dice 36 enteros, que era lo que la columna ya permitía.
 
-- `@Digits(integer = 36, fraction = 2)` en los 8 montos, alineado con la columna real.
-- Test de que un monto con 3 decimales se rechaza o se trunca, según qué se decida.
-- Test de un monto absurdamente grande.
+## 3. Concurrencia — documentado (no arreglado: es deuda de código, no de testing)
 
-## 3. Concurrencia
+Sigue sin `@Version` → dos `PUT` se pisan y gana el último en silencio. **No se
+arregló** (cambiar a locking optimista es otra tarea, con implicancias de UI: hay que
+mostrar el conflicto).
 
-Ninguna entidad tiene `@Version`, así que no hay locking optimista. Dos `PUT`
-simultáneos sobre la misma cuenta se pisan en silencio: gana el último, y el usuario no
-se entera de que su edición se perdió.
+Lo que sí se hizo por la deuda de testing: `OptimisticLockingTest` documenta el
+comportamiento actual (el update deja de afectar filas sin aviso, "lost update").
+Cuando se agregue `@Version`, **este test tiene que cambiar** por el que espera un
+conflicto/optimistic lock exception. Queda anotado ahí dentro.
 
-Esto no se arregla con un test, se arregla con `@Version` en las entidades. Pero sí
-conviene un test que **documente** la comportamiento actual, para que cuando se agregue
-el locking el test cambie y quede claro.
+## 4. Longitudes y unicode — resuelto ✅
 
-## 4. Longitudes y unicode
+- `@Size` en los strings que iban a una columna con límite real, con el máximo de la
+  columna: `name` (cuentas, categorías, etc.) → 7.959, `description` 255, `notes`
+  1000, `color` 30, `frequency` 50, `email` 254, `username` 50, password ≤72 (bcrypt
+  trunca a 72 **bytes**, ojo con contraseñas con caracteres multibyte).
+- Test de un nombre de 10.000 chars rechazado y de nombres unicode/acentos/emoji
+  aceptados (`@Pattern` con `[\\p{L} ]` ya existía en algunos).
 
-- Los strings de los DTOs no tienen `@Size` (salvo `RegisterDTO`): un nombre de cuenta
-  de 10.000 caracteres se guarda sin problema.
-- Nombres con acentos, emojis, RTL o CJK no se prueban en ninguna parte.
-- La columna `name` no tiene límite en la base tampoco.
+> Ojo que queda una diferencia sutil sin cubrir: `password` tiene `@Size(max=72)` por
+> **chars**, bcrypt corta por **bytes**. Un password de 72 chars "ñ" (144 bytes) aún
+> podría truncarse mal. En la práctica es inviable y se dejó así.
 
-## 5. tests dependientes del reloj
+- La columna `name` sigue sin límite en la base; el `@Size` del DTO es lo que manda.
 
-`ReportServiceProjectionsTest` depende de `YearMonth.now()`. Un test que corra a las
-23:59 del último día del mes cruza de mes a mitad de ejecución y falla sin que haya
-cambiado el código.
+## 5. tests dependientes del reloj — resuelto ✅
 
-Lo que falta: fijar el reloj (o inyectarlo) para que las proyecciones sean
-deterministas, y un test del cruce de mes a propósito.
+`ReportServiceProjections` ahora recibe un `Clock` inyectado (por constructor), el
+test usa un reloj fijado y las proyecciones son deterministas. Se agregó además un
+test que cruza el mes **a propósito** (último día 23:59 vs primer día 00:00 con
+el histórico fijo), que antes era imposible sin reescribir el servicio. Las proyecciones
+de 1 y 12 meses, el promedio conservador (3 meses) y el historial vacío quedaron
+cubiertos.
 
-## 6. Lo que se decidió no cubrir
+## 6. Registrado para cuando toque (no arreglado)
 
-Está en `testing-plan.md` bajo "Qué no vamos a cubrir": carga y rendimiento, E2E de UI,
-mails reales, y MCP/Telegram/NLP. Esto último entra en alcance con el agente de Telegram.
+- **Cantidades en `PATCH /users`**: el nuevo `@Size` válida con el user `null` y tira
+  `@NotNull`. Todas las columnas que tocan host en la base real son `not null`, así
+  que nunca hubo un `null` válido. Se espera que navegadores/crawlers puedan mandar
+  campos vacíos → `400`. Es un salto de comportamiento documentado, no un bug.
+- **Locking optimista** (ítem 3): implementarlo es tarea de código + UI.
+- **Bug conocido de confort**: `POST /auth/refreshToken` sin la cookie da `500` en vez
+  de `401` (`MissingRequestCookieException` sin manejar) — anotado en `endpoints.md`.
+- **Tooling**: `AccountRepositoryIT` levanta su Postgres en un `static` block, así que
+  sin Docker revienta al cargar la clase y no se "saltea" solo. Correrlo con Docker.
+
+## 7. Lo que se decidió no cubrir
+
+Igual que en `testing-plan.md`: carga y rendimiento, E2E de UI, mails reales, y
+MCP/Telegram/NLP. Lo último entra en alcance si llega el agente de Telegram.

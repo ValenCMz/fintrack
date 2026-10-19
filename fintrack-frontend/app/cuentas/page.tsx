@@ -5,6 +5,7 @@ import MainLayout from "@/app/components/layout/MainLayout";
 import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -127,28 +128,34 @@ export default function CuentasPage() {
             onSubmit={handleSubmit}
             className="grid grid-cols-1 md:grid-cols-3 gap-4"
           >
-            <Input
-              placeholder="Nombre"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-            />
-            <select
-              className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value as AccountType })}
-            >
-              {(Object.keys(TYPE_LABELS) as AccountType[]).map((t) => (
-                <option key={t} value={t}>
-                  {TYPE_LABELS[t]}
-                </option>
-              ))}
-            </select>
-            <Input
-              placeholder="Titular (opcional)"
-              value={form.owner}
-              onChange={(e) => setForm({ ...form, owner: e.target.value })}
-            />
+            <Field label="Nombre">
+              <Input
+                placeholder="Ej. Galicia"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+              />
+            </Field>
+            <Field label="Tipo">
+              <select
+                className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value as AccountType })}
+              >
+                {(Object.keys(TYPE_LABELS) as AccountType[]).map((t) => (
+                  <option key={t} value={t}>
+                    {TYPE_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Titular (opcional)">
+              <Input
+                placeholder="Ej. Valentin"
+                value={form.owner}
+                onChange={(e) => setForm({ ...form, owner: e.target.value })}
+              />
+            </Field>
             <DialogFooter className="md:col-span-3">
               <Button type="button" variant="outline" onClick={resetForm}>
                 Cancelar

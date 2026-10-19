@@ -14,15 +14,22 @@ import lombok.NoArgsConstructor;
 public class CardResponse {
     private UUID id;
     private String holderName;
-    private LocalDate dueDay;
-    private BigDecimal amount;
+    private int dueDayOfMonth;
+    private LocalDate nextDueDate;
     private boolean active;
+    private BigDecimal outstanding;
+    private BigDecimal nextInstallmentAmount;
+    private LocalDate nextInstallmentDueDate;
 
-    public CardResponse(com.valencmz.fintrack.model.entity.Card card) {
+    public CardResponse(com.valencmz.fintrack.model.entity.Card card, LocalDate nextDueDate, BigDecimal outstanding,
+            BigDecimal nextInstallmentAmount, LocalDate nextInstallmentDueDate) {
         this.id = card.getId();
         this.holderName = card.getHolderName();
-        this.dueDay = card.getDueDay();
-        this.amount = card.getAmount();
+        this.dueDayOfMonth = card.getDueDayOfMonth();
+        this.nextDueDate = nextDueDate;
         this.active = card.isActive();
+        this.outstanding = outstanding;
+        this.nextInstallmentAmount = nextInstallmentAmount;
+        this.nextInstallmentDueDate = nextInstallmentDueDate;
     }
 }

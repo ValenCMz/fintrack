@@ -112,8 +112,13 @@ Docker.
 | `UsuarioServiceUpdateTest` | email duplicado se rechaza |
 | `UsuarioServiceForgotPasswordTest` | email inexistente responde igual que existente |
 | `UsuarioServiceForgotPasswordTest` | email mal formado sí se rechaza |
-| `JwtServiceKeyTest` | clave Base64 inválida falla al arrancar |
+| `UsuarioServiceResetPasswordTest` | token usado → `400` (bug del token re-servible, cerrado) |
+| `UsuarioServiceResetPasswordTest` | token vencido / de otro email revoca y rechaza |
+| `JwtServiceKeyTest` | clave Base64 inválida falla al arrancar; válida no |
+| `RefreshTokenServiceTest` | refresh no encontrado, vencido o revocado → rechazado |
+| `RefreshTokenServiceTest` | refresh reutilizado revoca toda la cadena |
 | `SecurityConfigIT` | sin token da `401`; rol insuficiente da `403` |
+| `OptimisticLockingTest` | documenta el "lost update" actual (sin `@Version`) |
 
 El test de enumeración de emails es el que más valor tiene de esta tanda: es una
 decisión de diseño deliberada, y sin test se pierde en el primer refactor.
@@ -125,6 +130,9 @@ decisión de diseño deliberada, y sin test se pierde en el primer refactor.
 | `MontoValidationTest` | los 8 montos con `@NotNull` rechazan `null` |
 | `MontoValidationTest` | `currentAmount` y `remainingAmount` aceptan `0` |
 | `MontoValidationTest` | `amount` y `totalAmount` rechazan `0` y negativos |
+| `DigitsAmountValidationTest` | `@Digits(36,2)`: 3 decimales y 37 enteros → `400` |
+| `DigitsAmountValidationTest` | tope real de la columna (36+2) entra |
+| `SizeValidationTest` | `name` de 10.000 chars → `400`; unicode/acentos/emoji entran |
 
 Cubre `TransactionRequest`, `CardRequest`, `DebtRequest`, `SavingGoalRequest`,
 `MonotributoRequest` y `FixedExpendeRequest`. El caso de `0` en los dos montos de
@@ -168,10 +176,10 @@ romper el historial, y es justo lo que un test fácil no va a marcar.
 
 | Test | Qué verifica |
 |------|--------------|
-| `AccountRepositoryIT` | `owner` nullable en la base real |
-| `AccountRepositoryIT` | `findByUserIdAndActive` excluye los inactivos |
-| `CategoryRepositoryIT` | filtro `active` sobre categorías |
-| `ContextLoadIT` | la app levanta contra PostgreSQL real |
+| `AccountRepositoryIT` | `owner` nullable y guardado en la base real |
+| `AccountRepositoryIT` | `findByUserIdAndActive` excluye las inactivas y no mezcla usuarios |
+| `AccountRepositoryIT` | el filtro `active` de categorías también excluye inactivas |
+| `AccountRepositoryIT` | el UNIQUE de email se respeta en la base real |
 
 `owner` nullable merece un test de integración porque se resolvió con un
 `ALTER TABLE` manual, no con una migración. El DTO y la entidad lo permiten, pero si
@@ -213,17 +221,23 @@ levanta el contenedor.
 
 | Suite | Tests | Docker |
 |-------|-------|--------|
-| `ReportServiceProjectionsTest` | 10 | no |
-| `MontoValidationTest` | 25 | no |
+| `ReportServiceProjectionsTest` | 12 | no |
+| `MontoValidationTest` | 24 | no |
+| `DigitsAmountValidationTest` | 7 | no |
+| `SizeValidationTest` | 7 | no |
 | `GlobalExceptionHandlerTest` | 12 | no |
-| `UsuarioServiceTest` | 16 | no |
+| `UsuarioServiceTest` | 19 | no |
+| `RefreshTokenServiceTest` | 8 | no |
+| `JwtServiceKeyTest` | 10 | no |
+| `OptimisticLockingTest` | 3 | no |
 | `AccountServiceTest` | 8 | no |
 | `CategoryServiceSoftDeleteTest` | 4 | no |
 | `SoftDeleteServicesTest` | 13 | no |
 | `AccountRepositoryIT` | 6 | **sí** |
+| `SecurityConfigIT` | 6 | no |
 | `FintrackApplicationTests` | 1 | no (usa la base de desarrollo) |
 
-86 unitarios y 6 de integración, verdes.
+127 unitarios y 6 de integración, verdes.
 
 ## Dos trampas que aparecieron al implementarlo
 

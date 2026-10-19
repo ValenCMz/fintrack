@@ -10,9 +10,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
 import { toast } from "sonner";
 import { api, Card } from "@/lib/api";
-import { todayISO } from "@/lib/format";
 
 interface CardFormDialogProps {
   open: boolean;
@@ -31,26 +31,22 @@ const CardFormDialog = ({
   const [saving, setSaving] = useState(false);
 
   const [holderName, setHolderName] = useState("");
-  const [dueDay, setDueDay] = useState(todayISO());
-  const [amount, setAmount] = useState("");
+  const [dueDayOfMonth, setDueDayOfMonth] = useState("10");
 
   useEffect(() => {
     if (!open) return;
     if (card) {
       setHolderName(card.holderName);
-      setDueDay(card.dueDay);
-      setAmount(String(card.amount));
+      setDueDayOfMonth(String(card.dueDayOfMonth));
     } else {
       setHolderName("");
-      setDueDay(todayISO());
-      setAmount("");
+      setDueDayOfMonth("10");
     }
   }, [open, card]);
 
   function reset() {
     setHolderName("");
-    setDueDay(todayISO());
-    setAmount("");
+    setDueDayOfMonth("10");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -59,8 +55,7 @@ const CardFormDialog = ({
     try {
       const payload = {
         holderName,
-        dueDay,
-        amount: Number(amount),
+        dueDayOfMonth: Number(dueDayOfMonth),
         active: card?.active ?? true,
       };
       if (isEditing && card) {
@@ -86,27 +81,28 @@ const CardFormDialog = ({
           <DialogTitle>{isEditing ? "Editar tarjeta" : "Nueva tarjeta"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
-          <Input
-            placeholder="Titular"
-            value={holderName}
-            onChange={(e) => setHolderName(e.target.value)}
-            required
-          />
-          <Input
-            type="date"
-            value={dueDay}
-            onChange={(e) => setDueDay(e.target.value)}
-            required
-          />
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Monto a pagar"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-          />
+          <Field label="Titular">
+            <Input
+              placeholder="Ej. Visa Santander"
+              value={holderName}
+              onChange={(e) => setHolderName(e.target.value)}
+              required
+            />
+          </Field>
+          <Field
+            label="Día de vencimiento del resumen"
+            hint="Día del mes en que vence el resumen (1-31)"
+          >
+            <Input
+              type="number"
+              min="1"
+              max="31"
+              placeholder="10"
+              value={dueDayOfMonth}
+              onChange={(e) => setDueDayOfMonth(e.target.value)}
+              required
+            />
+          </Field>
           <DialogFooter>
             <Button
               type="button"

@@ -6,7 +6,6 @@ import {
   ArrowDownCircle,
   CalendarClock,
   CreditCard,
-  FileText,
   Landmark,
   PiggyBank,
   MessageCircle,
@@ -27,7 +26,6 @@ const navItems = [
   { icon: ArrowDownCircle, label: "Egresos", path: "/egresos" },
   { icon: CalendarClock, label: "Gastos Fijos", path: "/gastos-fijos" },
   { icon: CreditCard, label: "Tarjetas", path: "/tarjetas" },
-  { icon: FileText, label: "Monotributo", path: "/monotributo" },
   { icon: Landmark, label: "Deudas", path: "/deudas" },
   { icon: PiggyBank, label: "Ahorros", path: "/ahorros" },
 ];

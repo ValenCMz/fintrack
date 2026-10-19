@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
 import { toast } from "sonner";
 import { api, SavingGoal } from "@/lib/api";
 import { todayISO } from "@/lib/format";
@@ -93,35 +94,43 @@ const SavingGoalFormDialog = ({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
-          <Input
-            placeholder="Nombre"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <Input
-            type="date"
-            value={targetDate}
-            onChange={(e) => setTargetDate(e.target.value)}
-            required
-          />
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Objetivo"
-            value={targetAmount}
-            onChange={(e) => setTargetAmount(e.target.value)}
-            required
-          />
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Ahorrado hasta ahora (opcional)"
-            value={currentAmount}
-            onChange={(e) => setCurrentAmount(e.target.value)}
-          />
+          <Field label="Nombre de la meta">
+            <Input
+              placeholder="Ej. Viaje a Bariloche"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Fecha objetivo">
+            <Input
+              type="date"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Monto objetivo">
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              value={targetAmount}
+              onChange={(e) => setTargetAmount(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Monto ahorrado hasta ahora" hint="Opcional. Usá «Contribuir» para sumar aportes reales.">
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              value={currentAmount}
+              onChange={(e) => setCurrentAmount(e.target.value)}
+            />
+          </Field>
           <DialogFooter>
             <Button
               type="button"

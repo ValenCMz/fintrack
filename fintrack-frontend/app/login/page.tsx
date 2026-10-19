@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
 import { toast } from "sonner";
 
 export default function LoginPage() {
@@ -58,30 +59,36 @@ export default function LoginPage() {
           </p>
 
           {mode === "register" && (
-            <Input
-              placeholder="Nombre de usuario"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
+            <Field label="Nombre de usuario">
+              <Input
+                placeholder="Ej. valentin"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </Field>
           )}
 
-          <Input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+          <Field label="Email">
+            <Input
+              type="email"
+              placeholder="tu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </Field>
 
-          <Input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-          />
+          <Field label="Contraseña" hint="Mínimo 8 caracteres">
+            <Input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+            />
+          </Field>
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading

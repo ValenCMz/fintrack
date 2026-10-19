@@ -190,8 +190,7 @@ class SizeValidationTest {
     private CardRequest validCard() {
         CardRequest dto = new CardRequest();
         dto.setHolderName("Valentin");
-        dto.setDueDay(java.time.LocalDate.now().plusDays(10));
-        dto.setAmount(new BigDecimal("50000"));
+        dto.setDueDayOfMonth(10);
         dto.setActive(true);
         return dto;
     }

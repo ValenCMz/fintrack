@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import MainLayout from "@/app/components/layout/MainLayout";
 import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 import SavingGoalFormDialog from "@/app/components/forms/SavingGoalFormDialog";
+import SavingGoalContributionDialog from "@/app/components/forms/SavingGoalContributionDialog";
 import { Button } from "@/components/ui/button";
 import { PiggyBank, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ export default function AhorrosPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<SavingGoal | null>(null);
+  const [contributing, setContributing] = useState<SavingGoal | null>(null);
 
   async function load() {
     setGoals(await api.listSavingGoals());
@@ -80,6 +82,15 @@ export default function AhorrosPage() {
         goal={editing}
       />
 
+      <SavingGoalContributionDialog
+        open={contributing !== null}
+        onOpenChange={(v) => {
+          if (!v) setContributing(null);
+        }}
+        goal={contributing}
+        onContributed={load}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {loading ? (
           <p className="text-muted-foreground text-sm">Cargando...</p>
@@ -112,6 +123,12 @@ export default function AhorrosPage() {
                     {formatMoney(g.currentAmount)} de {formatMoney(g.targetAmount)}
                   </span>
                   <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setContributing(g)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Contribuir
+                    </button>
                     <button
                       onClick={() => openEdit(g)}
                       className="text-xs text-primary hover:underline"

@@ -11,7 +11,7 @@ interface Payment {
   name: string;
   amount: number;
   dueDate: string;
-  type: "fixed" | "card" | "monotributo";
+  type: "fixed" | "card";
 }
 
 const UpcomingPayments = () => {
@@ -20,10 +20,9 @@ const UpcomingPayments = () => {
   useEffect(() => {
     (async () => {
       try {
-        const [fixed, cards, monotributo] = await Promise.all([
+        const [fixed, cards] = await Promise.all([
           api.listFixedExpenses(),
           api.listCards(),
-          api.listMonotributo(),
         ]);
         const all: Payment[] = [
           ...fixed
@@ -36,21 +35,14 @@ const UpcomingPayments = () => {
               type: "fixed" as const,
             })),
           ...cards
-            .filter((c) => c.active)
+            .filter((c) => c.active && c.nextInstallmentAmount != null)
             .map((c) => ({
               id: c.id,
-              name: c.holderName,
-              amount: Number(c.amount),
-              dueDate: c.dueDay,
+              name: `${c.holderName} · cuota`,
+              amount: Number(c.nextInstallmentAmount),
+              dueDate: c.nextInstallmentDueDate as string,
               type: "card" as const,
             })),
-          ...monotributo.map((m) => ({
-            id: m.id,
-            name: m.name,
-            amount: Number(m.monthlyAmount),
-            dueDate: m.dueDay,
-            type: "monotributo" as const,
-          })),
         ];
         all.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
         setPayments(all.slice(0, 6));

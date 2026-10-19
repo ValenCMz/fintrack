@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 import com.valencmz.fintrack.errors.ApiResponse;
+import com.valencmz.fintrack.model.dto.card.CardDetailResponse;
+import com.valencmz.fintrack.model.dto.card.CardInstallmentPaymentRequest;
+import com.valencmz.fintrack.model.dto.card.CardPaymentResponse;
 import com.valencmz.fintrack.model.dto.card.CardRequest;
 import com.valencmz.fintrack.model.dto.card.CardResponse;
 import com.valencmz.fintrack.model.entity.auth.UserAuth;
@@ -42,6 +45,33 @@ public class CardController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UserAuth userAuth) {
         return ResponseEntity.ok(ApiResponse.success(cardService.getById(id, userAuth)));
+    }
+
+    @GetMapping("/{id}/detail")
+    public ResponseEntity<ApiResponse<CardDetailResponse>> getDetail(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserAuth userAuth) {
+        return ResponseEntity.ok(ApiResponse.success(cardService.getDetail(id, userAuth)));
+    }
+
+    @PostMapping("/{id}/installments/{installmentId}/pay")
+    public ResponseEntity<ApiResponse<CardPaymentResponse>> payInstallment(
+            @PathVariable UUID id,
+            @PathVariable UUID installmentId,
+            @Valid @RequestBody CardInstallmentPaymentRequest request,
+            @AuthenticationPrincipal UserAuth userAuth) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(cardService.payInstallment(id, installmentId, request, userAuth)));
+    }
+
+    @PostMapping("/{id}/items/{transactionId}/pay")
+    public ResponseEntity<ApiResponse<List<CardPaymentResponse>>> payItem(
+            @PathVariable UUID id,
+            @PathVariable UUID transactionId,
+            @Valid @RequestBody CardInstallmentPaymentRequest request,
+            @AuthenticationPrincipal UserAuth userAuth) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(cardService.payItem(id, transactionId, request, userAuth)));
     }
 
     @PostMapping

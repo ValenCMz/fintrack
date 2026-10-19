@@ -5,6 +5,7 @@ import MainLayout from "@/app/components/layout/MainLayout";
 import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -152,36 +153,44 @@ export default function DeudasPage() {
             onSubmit={handleSubmit}
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            <Input
-              placeholder="Acreedor"
-              value={creditor}
-              onChange={(e) => setCreditor(e.target.value)}
-              required
-            />
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-            />
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="Monto total"
-              value={totalAmount}
-              onChange={(e) => setTotalAmount(e.target.value)}
-              required
-            />
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="Pendiente"
-              value={remainingAmount}
-              onChange={(e) => setRemainingAmount(e.target.value)}
-              required
-            />
+            <Field label="Acreedor">
+              <Input
+                placeholder="Ej. Banco Nación"
+                value={creditor}
+                onChange={(e) => setCreditor(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Fecha de inicio">
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Monto total">
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={totalAmount}
+                onChange={(e) => setTotalAmount(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Monto pendiente">
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={remainingAmount}
+                onChange={(e) => setRemainingAmount(e.target.value)}
+                required
+              />
+            </Field>
             <DialogFooter className="md:col-span-2">
               <Button
                 type="button"

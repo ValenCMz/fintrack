@@ -140,7 +140,7 @@ export default function Index() {
                   category={t.categoryName ?? "Sin categoría"}
                   amount={Number(t.amount)}
                   date={t.date}
-                  account={t.accountName ?? "—"}
+                  account={t.accountName ?? t.cardName ?? "—"}
                 />
               ))}
             </div>

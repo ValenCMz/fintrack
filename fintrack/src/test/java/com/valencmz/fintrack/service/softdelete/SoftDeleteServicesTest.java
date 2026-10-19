@@ -27,9 +27,12 @@ import com.valencmz.fintrack.model.entity.FixedExpende;
 import com.valencmz.fintrack.model.entity.SavingGoal;
 import com.valencmz.fintrack.model.entity.User;
 import com.valencmz.fintrack.model.entity.auth.UserAuth;
+import com.valencmz.fintrack.repository.CardInstallmentRepository;
+import com.valencmz.fintrack.repository.CardPaymentRepository;
 import com.valencmz.fintrack.repository.CardRepository;
 import com.valencmz.fintrack.repository.FixedExpendeRepository;
 import com.valencmz.fintrack.repository.SavingGoalRepository;
+import com.valencmz.fintrack.repository.TransactionRepository;
 import com.valencmz.fintrack.service.card.CardService;
 import com.valencmz.fintrack.service.fixedexpense.FixedExpendeService;
 import com.valencmz.fintrack.service.savinggoal.SavingGoalService;
@@ -59,8 +62,7 @@ class SoftDeleteServicesTest {
         Card c = new Card();
         c.setId(UUID.randomUUID());
         c.setHolderName("Valentin");
-        c.setDueDay(LocalDate.now().plusDays(10));
-        c.setAmount(new java.math.BigDecimal("50000"));
+        c.setDueDayOfMonth(10);
         c.setActive(active);
         c.setUser(userAuth.getUser());
         return c;
@@ -130,6 +132,15 @@ class SoftDeleteServicesTest {
         CardRepository repo = mock(CardRepository.class);
         CardService service = new CardService();
         ReflectionTestUtils.setField(service, "cardRepository", repo);
+        TransactionRepository transactionRepo = mock(TransactionRepository.class);
+        CardPaymentRepository paymentRepo = mock(CardPaymentRepository.class);
+        CardInstallmentRepository installmentRepo = mock(CardInstallmentRepository.class);
+        when(transactionRepo.findByCardIdAndUserId(any(), any())).thenReturn(List.of());
+        when(paymentRepo.findByCardIdAndUserId(any(), any())).thenReturn(List.of());
+        when(installmentRepo.findByCardIdAndPaidOrderByDueDateAsc(any(), anyBoolean())).thenReturn(List.of());
+        ReflectionTestUtils.setField(service, "transactionRepository", transactionRepo);
+        ReflectionTestUtils.setField(service, "cardPaymentRepository", paymentRepo);
+        ReflectionTestUtils.setField(service, "cardInstallmentRepository", installmentRepo);
 
         Card deactivated = card(false);
         when(repo.findByIdAndUserId(deactivated.getId(), userId)).thenReturn(Optional.of(deactivated));

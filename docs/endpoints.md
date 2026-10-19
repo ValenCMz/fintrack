@@ -256,8 +256,14 @@ Mismos 5 endpoints que cuentas. `CategoryResponse`: `{ id, name, color, type, ac
 | `amount` | obligatorio, mayor a 0 |
 | `date` | obligatorio |
 | `categoryId` | obligatorio, debe existir y ser tuya |
-| `accountId` | obligatorio, debe existir y ser tuyo |
+| `accountId` | si no mandás `cardId`. Debe existir y ser tuya |
+| `cardId` | solo gastos. La compra queda en la tarjeta y genera cuotas |
+| `installments` | opcional, 1-36 (default 1). Solo con `cardId` |
 | `notes` | opcional, la columna es nullable |
+
+Una transacción se paga **con cuenta** o se **carga a tarjeta**, nunca las dos.
+Si mandás `cardId` se ignora `accountId`, y se generan `installments` cuotas
+(el resto del redondeo va a la última).
 
 | Endpoint | Notas |
 |----------|-------|
@@ -265,11 +271,11 @@ Mismos 5 endpoints que cuentas. `CategoryResponse`: `{ id, name, color, type, ac
 | `GET /transactions/summary?from=&to=` | Totales del rango. Sin params toma todo |
 | `GET /transactions/{id}` | Una |
 | `POST /transactions` | `201` |
-| `PUT /transactions/{id}` | `200` |
-| `DELETE /transactions/{id}` | `200`, **borrado real**, la fila desaparece |
+| `PUT /transactions/{id}` | `200`. No deja cambiar el plan si hay cuotas pagas |
+| `DELETE /transactions/{id}` | `200`, **borrado real**. Borra también sus cuotas y pagos |
 
 `TransactionResponse` agrega los nombres resueltos: `{ id, type, description, amount,
-date, notes, categoryName, accountName }`
+date, notes, installments, categoryName, accountName, cardName }`
 
 `TransactionSummaryResponse`: `{ totalIncome, totalExpense, balance, from, to }`
 
@@ -278,13 +284,35 @@ date, notes, categoryName, accountName }`
 # Tarjetas — `/cards`
 
 ```json
-{ "holderName": "Valentin C", "dueDay": "2026-09-20", "amount": 50000, "active": true }
+{ "holderName": "Valentin C", "dueDayOfMonth": 20, "active": true }
 ```
 
-`dueDay` es una **fecha**, no un número de día. Mismos 5 endpoints que cuentas.
-`DELETE` es baja lógica.
+`dueDayOfMonth` es un **día del mes (1-31)**, no una fecha. El saldo no se guarda:
+`outstanding` = suma de las cuotas impagas. Mismos 5 endpoints, `DELETE` es baja lógica.
 
-`CardResponse`: `{ id, holderName, dueDay, amount, active }`
+`CardResponse`: `{ id, holderName, dueDayOfMonth, nextDueDate, active, outstanding,
+nextInstallmentAmount, nextInstallmentDueDate }`
+
+### Detalle y pagos de cuotas
+
+| Endpoint | Notas |
+|----------|-------|
+| `GET /cards/{id}/detail` | Compras, cuotas y pagos de la tarjeta |
+| `POST /cards/{id}/installments/{installmentId}/pay` | Paga una cuota |
+| `POST /cards/{id}/items/{transactionId}/pay` | Paga todas las cuotas impagas de un detalle |
+
+El body de los dos pagos es `{ "accountId": "uuid", "date": "2026-09-10" }`: el
+monto lo calcula el servidor a partir de la cuota. Pagar una cuota ya paga o un
+detalle ya saldado devuelve `400`.
+
+`CardDetailResponse`: `{ id, holderName, dueDayOfMonth, nextDueDate, active,
+outstanding, nextInstallmentAmount, nextInstallmentDueDate, purchases,
+installments, payments }`
+
+`CardInstallmentResponse`: `{ id, number, installments, amount, dueDate, paid,
+paidDate, transactionId, description }`
+
+`CardPaymentResponse`: `{ id, accountId, accountName, amount, date }`
 
 ---
 
@@ -324,6 +352,21 @@ Mismos 5 endpoints, pero `DELETE` es **borrado real**.
 `currentAmount` puede ser `0`. Mismos 5 endpoints, `DELETE` es baja lógica.
 
 `SavingGoalResponse`: `{ id, name, targetAmount, currentAmount, targetDate, active }`
+
+### Aportes a la meta
+
+| Endpoint | Notas |
+|----------|-------|
+| `POST /saving-goals/{id}/contributions` | Suma un aporte y lo registra como ingreso |
+
+```json
+{ "amount": 50000, "date": "2026-09-10", "accountId": "uuid", "categoryId": "uuid" }
+```
+
+Un aporte es un **ingreso real**: se crea una transacción `INCOME` en la cuenta y
+se suma el monto a `currentAmount` en la misma transacción de base de datos, así
+el saldo de la cuenta y el progreso de la meta nunca se desincronizan.
+`categoryId` es opcional (default: la categoría global "Otros ingresos").
 
 ---
 

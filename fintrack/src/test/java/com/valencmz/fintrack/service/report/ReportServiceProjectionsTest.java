@@ -90,8 +90,11 @@ class ReportServiceProjectionsTest {
                 new BigDecimal(amount),
                 month.atDay(10),
                 null,
+                1,
+                new java.util.ArrayList<>(),
                 category,
                 account,
+                null,
                 userAuth.getUser());
     }
 

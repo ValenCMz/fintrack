@@ -1,14 +1,10 @@
 package com.valencmz.fintrack.model.dto.card;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-
 import com.valencmz.fintrack.model.entity.Card;
 
-import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,19 +17,15 @@ public class CardRequest {
     @NotBlank
     @Size(max = 120)
     private String holderName;
-    @NotNull
-    private LocalDate dueDay;
-    @NotNull
-    @Positive
-    @Digits(integer = 36, fraction = 2)
-    private BigDecimal amount;
+    @Min(1)
+    @Max(31)
+    private int dueDayOfMonth;
     private boolean active;
 
     public Card toEntity() {
         Card card = new Card();
         card.setHolderName(this.holderName);
-        card.setDueDay(this.dueDay);
-        card.setAmount(this.amount);
+        card.setDueDayOfMonth(this.dueDayOfMonth);
         card.setActive(this.active);
         return card;
     }

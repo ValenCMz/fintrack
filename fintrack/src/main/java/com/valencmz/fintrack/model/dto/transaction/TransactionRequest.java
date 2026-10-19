@@ -7,6 +7,8 @@ import java.util.UUID;
 import com.valencmz.fintrack.enums.TransactionType;
 
 import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -34,6 +36,15 @@ public class TransactionRequest {
     private String notes;
     @NotNull
     private UUID categoryId;
-    @NotNull
+    // accountId o cardId: una compra con tarjeta no toca la cuenta hasta pagarse.
     private UUID accountId;
+    private UUID cardId;
+    // Cuotas en las que se paga una compra con tarjeta (1-36).
+    @Min(1)
+    @Max(36)
+    private Integer installments;
+
+    public int resolvedInstallments() {
+        return installments != null ? installments : 1;
+    }
 }

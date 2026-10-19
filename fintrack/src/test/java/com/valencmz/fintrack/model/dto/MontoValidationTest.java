@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.valencmz.fintrack.model.dto.savinggoal.SavingGoalContributionRequest;
 import com.valencmz.fintrack.model.dto.card.CardRequest;
 import com.valencmz.fintrack.model.dto.debt.DebtRequest;
 import com.valencmz.fintrack.model.dto.fixedexpense.FixedExpendeRequest;
@@ -32,7 +33,7 @@ class MontoValidationTest {
 
     private static final List<String> NOT_NULL_AMOUNTS = List.of(
             "com.valencmz.fintrack.model.dto.transaction.TransactionRequest.amount",
-            "com.valencmz.fintrack.model.dto.card.CardRequest.amount",
+            "com.valencmz.fintrack.model.dto.savinggoal.SavingGoalContributionRequest.amount",
             "com.valencmz.fintrack.model.dto.debt.DebtRequest.totalAmount",
             "com.valencmz.fintrack.model.dto.debt.DebtRequest.remainingAmount",
             "com.valencmz.fintrack.model.dto.savinggoal.SavingGoalRequest.targetAmount",
@@ -49,7 +50,7 @@ class MontoValidationTest {
     @ParameterizedTest(name = "{0} rechaza null")
     @ValueSource(strings = {
             "com.valencmz.fintrack.model.dto.transaction.TransactionRequest#amount",
-            "com.valencmz.fintrack.model.dto.card.CardRequest#amount",
+            "com.valencmz.fintrack.model.dto.savinggoal.SavingGoalContributionRequest#amount",
             "com.valencmz.fintrack.model.dto.debt.DebtRequest#totalAmount",
             "com.valencmz.fintrack.model.dto.debt.DebtRequest#remainingAmount",
             "com.valencmz.fintrack.model.dto.savinggoal.SavingGoalRequest#targetAmount",
@@ -74,7 +75,7 @@ class MontoValidationTest {
     @ParameterizedTest(name = "{0} conserva @NotNull")
     @ValueSource(strings = {
             "com.valencmz.fintrack.model.dto.transaction.TransactionRequest#amount",
-            "com.valencmz.fintrack.model.dto.card.CardRequest#amount",
+            "com.valencmz.fintrack.model.dto.savinggoal.SavingGoalContributionRequest#amount",
             "com.valencmz.fintrack.model.dto.debt.DebtRequest#totalAmount",
             "com.valencmz.fintrack.model.dto.debt.DebtRequest#remainingAmount",
             "com.valencmz.fintrack.model.dto.savinggoal.SavingGoalRequest#targetAmount",
@@ -116,7 +117,7 @@ class MontoValidationTest {
     @Test
     @DisplayName("un amount null se rechaza aunque el resto del DTO este completo")
     void amountNullSeRechaza() {
-        CardRequest dto = validCard();
+        SavingGoalContributionRequest dto = validContribution();
         dto.setAmount(null);
 
         assertThat(VALIDATOR.validate(dto))
@@ -127,7 +128,7 @@ class MontoValidationTest {
     @ValueSource(strings = { "0", "-1", "-0.01" })
     @DisplayName("amount, totalAmount y targetAmount rechazan cero y negativos")
     void rechazaCeroYNegativos(String value) {
-        CardRequest card = validCard();
+        SavingGoalContributionRequest card = validContribution();
         card.setAmount(new BigDecimal(value));
 
         DebtRequest debt = validDebt();
@@ -185,9 +186,16 @@ class MontoValidationTest {
     private CardRequest validCard() {
         CardRequest dto = new CardRequest();
         dto.setHolderName("Valentin");
-        dto.setDueDay(java.time.LocalDate.now().plusDays(10));
-        dto.setAmount(new BigDecimal("50000"));
+        dto.setDueDayOfMonth(10);
         dto.setActive(true);
+        return dto;
+    }
+
+    private SavingGoalContributionRequest validContribution() {
+        SavingGoalContributionRequest dto = new SavingGoalContributionRequest();
+        dto.setAccountId(java.util.UUID.randomUUID());
+        dto.setAmount(new BigDecimal("50000"));
+        dto.setDate(java.time.LocalDate.now());
         return dto;
     }
 

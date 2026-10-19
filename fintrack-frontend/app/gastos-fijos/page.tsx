@@ -6,6 +6,7 @@ import MainLayout from "@/app/components/layout/MainLayout";
 import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -181,58 +182,70 @@ export default function GastosFijosPage() {
             onSubmit={handleSubmit}
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            <Input
-              placeholder="Nombre"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="Monto"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
-            <Input
-              type="date"
-              value={dueDay}
-              onChange={(e) => setDueDay(e.target.value)}
-              required
-            />
-            <Input
-              placeholder="Frecuencia"
-              value={frequency}
-              onChange={(e) => setFrequency(e.target.value)}
-            />
-            <select
-              className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              required
-            >
-              <option value="">Cuenta...</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              required
-            >
-              <option value="">Categoría...</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <Field label="Nombre">
+              <Input
+                placeholder="Ej. Alquiler"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Monto">
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Vencimiento">
+              <Input
+                type="date"
+                value={dueDay}
+                onChange={(e) => setDueDay(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Frecuencia">
+              <Input
+                placeholder="Ej. Mensual"
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value)}
+              />
+            </Field>
+            <Field label="Cuenta">
+              <select
+                className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                required
+              >
+                <option value="">Elegí una cuenta...</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Categoría">
+              <select
+                className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                required
+              >
+                <option value="">Elegí una categoría...</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <DialogFooter className="md:col-span-2">
               <Button
                 type="button"

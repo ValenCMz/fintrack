@@ -174,7 +174,7 @@ const TransactionsPage = ({ type }: TransactionsPageProps) => {
                 category={t.categoryName ?? "Sin categoría"}
                 amount={Number(t.amount)}
                 date={t.date}
-                account={t.accountName ?? "—"}
+                account={t.accountName ?? t.cardName ?? "—"}
                 onDelete={() => handleDelete(t.id)}
                 onEdit={() => openEdit(t)}
               />

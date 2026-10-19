@@ -182,8 +182,14 @@ Registra cada **movimiento de dinero** — un ingreso o un gasto puntual.
 | `amount` | Monto en pesos |
 | `date` | Fecha de la transacción |
 | `notes` | Notas opcionales |
+| `installments` | Cuotas de una compra con tarjeta (1 = pago único) |
 | `category` | FK a `category` — de qué categoría es |
-| `account` | FK a `account` — de qué cuenta salió/entró |
+| `account` | FK a `account` — de qué cuenta salió/entró (null si se cargó a tarjeta) |
+| `card` | FK a `card` — tarjeta donde se cargó la compra (null si se pagó con cuenta) |
+
+Una transacción se paga **desde una cuenta** o se **carga a una tarjeta**, pero
+nunca las dos. Cuando va a la tarjeta, `account` queda en null: la cuenta recién
+se mueve cuando se paga una cuota.
 
 **Ejemplo:** "Cobré el sueldo" → `INCOME`, $500.000, categoría "Sueldo", cuenta "Santander".
 
@@ -208,11 +214,44 @@ Tarjeta de crédito con sus datos de vencimiento.
 | Campo | Descripción |
 |-------|-------------|
 | `holderName` | Nombre del titular |
-| `dueDay` | Día de vencimiento |
-| `amount` | Monto actual a pagar |
+| `dueDayOfMonth` | Día del mes en que cierra el resumen (1-31) |
 | `active` | Si está en uso |
 
-**Ejemplo:** "Visa Santander" → vence el 15, $45.000 a pagar.
+El saldo no se guarda: se calcula como la suma de las cuotas impagas.
+
+**Ejemplo:** "Visa Santander" → cierra el 15, $45.000 pendientes.
+
+### `CardInstallment` → tabla `card_installment`
+Cada cuota de un detalle cargado a la tarjeta. Una compra en N cuotas genera N
+filas; el total se reparte y el resto del redondeo cae en la última cuota.
+
+| Campo | Descripción |
+|-------|-------------|
+| `number` | Número de cuota (1..N) |
+| `amount` | Importe de esa cuota |
+| `dueDate` | Vencimiento de la cuota |
+| `paid` | Si ya se pagó |
+| `paidDate` | Fecha en que se pagó |
+| `transaction` | FK a `transaction` — la compra que la originó |
+| `card` | FK a `card` |
+| `account` | FK a `account` — cuenta desde la que se pagó (null si está impaga) |
+
+**Ejemplo:** "Zapatillas" $60.000 en 3 cuotas → 3 filas de $20.000.
+
+### `CardPayment` → tabla `card_payment`
+Pago de una cuota. Mueve plata de una cuenta real hacia la tarjeta, pero **no es
+un gasto nuevo** (la compra ya se contó como egreso al hacerse). Por eso vive en
+su propia tabla y no ensucia los resúmenes de gastos.
+
+| Campo | Descripción |
+|-------|-------------|
+| `amount` | Importe pagado (el de la cuota) |
+| `date` | Fecha del pago |
+| `card` | FK a `card` |
+| `cardInstallment` | FK a `card_installment` — cuota que salda (única) |
+| `account` | FK a `account` — de dónde salió la plata |
+
+**Ejemplo:** pago de la cuota 1 de "Zapatillas" → $20.000 desde "Galicia".
 
 ### `Debt` → tabla `debt`
 Deuda a pagar (préstamo, cuotas, etc.).
@@ -283,12 +322,19 @@ erDiagram
     users ||--o{ transaction : has
     users ||--o{ fixed_expende : has
     users ||--o{ card : has
+    users ||--o{ card_payment : has
     users ||--o{ debt : has
     users ||--o{ saving_goal : has
     users ||--o{ monotributo : has
     users ||--o{ refresh_token : has
     category ||--o{ transaction : categorized_as
     account ||--o{ transaction : from_account
+    card ||--o{ transaction : charged_to
+    transaction ||--o{ card_installment : split_in
+    card ||--o{ card_installment : billed_on
+    card_installment ||--o| card_payment : settled_by
+    card ||--o{ card_payment : paid_with
+    account ||--o{ card_payment : from_account
     category ||--o{ fixed_expende : categorized_as
     account ||--o{ fixed_expende : from_account
 
@@ -325,8 +371,10 @@ erDiagram
         bigdecimal amount
         date date
         string notes
+        int installments "cuotas (1 = pago unico)"
         UUID category_id FK
-        UUID account_id FK
+        UUID account_id FK "null si es con tarjeta"
+        UUID card_id FK "null si es con cuenta"
         UUID user_id FK
     }
 
@@ -345,9 +393,30 @@ erDiagram
     card {
         UUID id PK
         string holderName
-        date dueDay
-        bigdecimal amount
+        int dueDayOfMonth "1-31"
         boolean active
+        UUID user_id FK
+    }
+
+    card_installment {
+        UUID id PK
+        int number "1..N"
+        bigdecimal amount
+        date dueDate
+        boolean paid
+        date paidDate
+        UUID transaction_id FK
+        UUID card_id FK
+        UUID account_id FK "cuenta que pago, si pago"
+    }
+
+    card_payment {
+        UUID id PK
+        bigdecimal amount
+        date date
+        UUID card_id FK
+        UUID card_installment_id FK UK
+        UUID account_id FK
         UUID user_id FK
     }
 
@@ -508,9 +577,9 @@ Ver documentación detallada en [`docs/error-handling.md`](error-handling.md).
 | **Categories** | `GET/POST /categories`, `GET/PUT/DELETE /categories/{id}` | Sí |
 | **Transactions** | `GET/POST /transactions`, `GET/PUT/DELETE /transactions/{id}` | Sí |
 | **FixedExpenses** | `GET/POST /fixed-expenses`, `GET/PUT/DELETE /fixed-expenses/{id}` | Sí |
-| **Cards** | `GET/POST /cards`, `GET/PUT/DELETE /cards/{id}` | Sí |
+| **Cards** | `GET/POST /cards`, `GET/PUT/DELETE /cards/{id}`, `GET /cards/{id}/detail`, `POST /cards/{id}/installments/{iid}/pay`, `POST /cards/{id}/items/{tid}/pay` | Sí |
 | **Debts** | `GET/POST /debts`, `GET/PUT/DELETE /debts/{id}` | Sí |
-| **SavingGoals** | `GET/POST /saving-goals`, `GET/PUT/DELETE /saving-goals/{id}` | Sí |
+| **SavingGoals** | `GET/POST /saving-goals`, `GET/PUT/DELETE /saving-goals/{id}`, `POST /saving-goals/{id}/contributions` | Sí |
 | **Monotributo** | `GET/POST /monotributo`, `GET/PUT/DELETE /monotributo/{id}` | Sí |
 
 ---

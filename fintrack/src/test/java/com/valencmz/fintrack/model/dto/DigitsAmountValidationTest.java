@@ -16,6 +16,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.valencmz.fintrack.enums.DebtStatus;
 import com.valencmz.fintrack.enums.MonotributoStatus;
 import com.valencmz.fintrack.enums.TransactionType;
+import com.valencmz.fintrack.model.dto.savinggoal.SavingGoalContributionRequest;
 import com.valencmz.fintrack.model.dto.card.CardRequest;
 import com.valencmz.fintrack.model.dto.debt.DebtRequest;
 import com.valencmz.fintrack.model.dto.fixedexpense.FixedExpendeRequest;
@@ -42,7 +43,7 @@ class DigitsAmountValidationTest {
 
     private static final String[] MONTOS = {
             "com.valencmz.fintrack.model.dto.transaction.TransactionRequest#amount",
-            "com.valencmz.fintrack.model.dto.card.CardRequest#amount",
+            "com.valencmz.fintrack.model.dto.savinggoal.SavingGoalContributionRequest#amount",
             "com.valencmz.fintrack.model.dto.debt.DebtRequest#totalAmount",
             "com.valencmz.fintrack.model.dto.debt.DebtRequest#remainingAmount",
             "com.valencmz.fintrack.model.dto.savinggoal.SavingGoalRequest#targetAmount",
@@ -161,6 +162,7 @@ class DigitsAmountValidationTest {
     private Object construirValido(String referencia) {
         String className = referencia.substring(0, referencia.indexOf('#'));
         return switch (className) {
+            case "com.valencmz.fintrack.model.dto.savinggoal.SavingGoalContributionRequest" -> validContribution();
             case "com.valencmz.fintrack.model.dto.card.CardRequest" -> validCard();
             case "com.valencmz.fintrack.model.dto.debt.DebtRequest" -> validDebt();
             case "com.valencmz.fintrack.model.dto.savinggoal.SavingGoalRequest" -> validSavingGoal();
@@ -174,9 +176,16 @@ class DigitsAmountValidationTest {
     private CardRequest validCard() {
         CardRequest dto = new CardRequest();
         dto.setHolderName("Valentin");
-        dto.setDueDay(java.time.LocalDate.now().plusDays(10));
-        dto.setAmount(new BigDecimal("50000"));
+        dto.setDueDayOfMonth(10);
         dto.setActive(true);
+        return dto;
+    }
+
+    private SavingGoalContributionRequest validContribution() {
+        SavingGoalContributionRequest dto = new SavingGoalContributionRequest();
+        dto.setAccountId(UUID.randomUUID());
+        dto.setAmount(new BigDecimal("50000"));
+        dto.setDate(java.time.LocalDate.now());
         return dto;
     }
 

@@ -22,4 +22,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     public Optional<Transaction> findByIdAndUserId(UUID id, UUID userId);
 
+    public List<Transaction> findByCardIdAndUserId(UUID cardId, UUID userId);
+
 }

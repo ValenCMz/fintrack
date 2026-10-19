@@ -20,9 +20,11 @@ import com.valencmz.fintrack.model.dto.report.CategoryExpenseResponse;
 import com.valencmz.fintrack.model.dto.report.MonthlySummaryResponse;
 import com.valencmz.fintrack.model.dto.report.ProjectionResponse;
 import com.valencmz.fintrack.model.entity.Account;
+import com.valencmz.fintrack.model.entity.CardPayment;
 import com.valencmz.fintrack.model.entity.Transaction;
 import com.valencmz.fintrack.model.entity.auth.UserAuth;
 import com.valencmz.fintrack.repository.AccountRepository;
+import com.valencmz.fintrack.repository.CardPaymentRepository;
 import com.valencmz.fintrack.repository.TransactionRepository;
 
 @Service
@@ -34,6 +36,8 @@ public class ReportService {
     private TransactionRepository transactionRepository;
     @Autowired
     private AccountRepository accountRepository;
+    @Autowired
+    private CardPaymentRepository cardPaymentRepository;
 
     private Clock clock = Clock.systemDefaultZone();
 
@@ -100,6 +104,17 @@ public class ReportService {
                 current = current.subtract(t.getAmount());
             }
             balances.put(accountId, current);
+        }
+
+        // Los pagos de tarjeta mueven plata de la cuenta (aunque no son un gasto
+        // nuevo, porque la compra ya se conto al hacerse), asi que restan saldo.
+        for (CardPayment p : cardPaymentRepository.findByUserId(userId)) {
+            UUID accountId = p.getAccount() != null ? p.getAccount().getId() : null;
+            if (accountId == null) {
+                continue;
+            }
+            BigDecimal current = balances.getOrDefault(accountId, BigDecimal.ZERO);
+            balances.put(accountId, current.subtract(p.getAmount()));
         }
 
         List<AccountBalanceResponse> result = new ArrayList<>();

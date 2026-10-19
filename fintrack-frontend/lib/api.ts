@@ -98,7 +98,6 @@ export type TransactionType = "INCOME" | "EXPENSE";
 export type AccountType = "CASH" | "WALLET" | "BANK" | "CARD";
 export type CategoryType = "INCOME" | "EXPENSE";
 export type DebtStatus = "PAID" | "ACTIVE";
-export type MonotributoStatus = "UP_TO_DATE" | "DEBT";
 
 export interface User {
   id: string;
@@ -134,6 +133,9 @@ export interface Transaction {
   categoryId?: string;
   accountName?: string;
   accountId?: string;
+  cardName?: string;
+  cardId?: string;
+  installments?: number;
 }
 
 export interface FixedExpense {
@@ -152,9 +154,38 @@ export interface FixedExpense {
 export interface Card {
   id: string;
   holderName: string;
-  dueDay: string;
-  amount: number;
+  dueDayOfMonth: number;
+  nextDueDate: string;
   active: boolean;
+  outstanding: number;
+  nextInstallmentAmount?: number | null;
+  nextInstallmentDueDate?: string | null;
+}
+
+export interface CardInstallment {
+  id: string;
+  number: number;
+  installments: number;
+  amount: number;
+  dueDate: string;
+  paid: boolean;
+  paidDate?: string | null;
+  transactionId: string;
+  description: string;
+}
+
+export interface CardPayment {
+  id: string;
+  accountId?: string;
+  accountName?: string;
+  amount: number;
+  date: string;
+}
+
+export interface CardDetail extends Card {
+  purchases: Transaction[];
+  installments: CardInstallment[];
+  payments: CardPayment[];
 }
 
 export interface Debt {
@@ -173,14 +204,6 @@ export interface SavingGoal {
   currentAmount: number;
   targetDate: string;
   active: boolean;
-}
-
-export interface Monotributo {
-  id: string;
-  name: string;
-  monthlyAmount: number;
-  dueDay: string;
-  status: MonotributoStatus;
 }
 
 export interface TransactionSummary {
@@ -238,7 +261,9 @@ export interface TransactionRequest {
   date: string;
   notes?: string;
   categoryId: string;
-  accountId: string;
+  accountId?: string;
+  cardId?: string;
+  installments?: number;
 }
 
 export interface FixedExpenseRequest {
@@ -253,9 +278,13 @@ export interface FixedExpenseRequest {
 
 export interface CardRequest {
   holderName: string;
-  dueDay: string;
-  amount: number;
+  dueDayOfMonth: number;
   active: boolean;
+}
+
+export interface CardInstallmentPaymentRequest {
+  accountId: string;
+  date: string;
 }
 
 export interface DebtRequest {
@@ -274,11 +303,11 @@ export interface SavingGoalRequest {
   active: boolean;
 }
 
-export interface MonotributoRequest {
-  name: string;
-  monthlyAmount: number;
-  dueDay: string;
-  status: MonotributoStatus;
+export interface SavingGoalContributionRequest {
+  amount: number;
+  date: string;
+  accountId: string;
+  categoryId?: string;
 }
 
 // ─────────────────────────────── API ───────────────────────────────
@@ -330,6 +359,12 @@ export const api = {
 
   // Cards
   listCards: () => get<Card[]>("/cards"),
+  getCard: (id: string) => get<Card>(`/cards/${id}`),
+  getCardDetail: (id: string) => get<CardDetail>(`/cards/${id}/detail`),
+  payCardInstallment: (cardId: string, installmentId: string, data: CardInstallmentPaymentRequest) =>
+    post<CardPayment>(`/cards/${cardId}/installments/${installmentId}/pay`, data),
+  payCardItem: (cardId: string, transactionId: string, data: CardInstallmentPaymentRequest) =>
+    post<CardPayment[]>(`/cards/${cardId}/items/${transactionId}/pay`, data),
   createCard: (data: CardRequest) => post<Card>("/cards", data),
   updateCard: (id: string, data: CardRequest) => put<Card>(`/cards/${id}`, data),
   deleteCard: (id: string) => del(`/cards/${id}`),
@@ -347,14 +382,8 @@ export const api = {
   updateSavingGoal: (id: string, data: SavingGoalRequest) =>
     put<SavingGoal>(`/saving-goals/${id}`, data),
   deleteSavingGoal: (id: string) => del(`/saving-goals/${id}`),
-
-  // Monotributo
-  listMonotributo: () => get<Monotributo[]>("/monotributo"),
-  createMonotributo: (data: MonotributoRequest) =>
-    post<Monotributo>("/monotributo", data),
-  updateMonotributo: (id: string, data: MonotributoRequest) =>
-    put<Monotributo>(`/monotributo/${id}`, data),
-  deleteMonotributo: (id: string) => del(`/monotributo/${id}`),
+  contributeToSavingGoal: (id: string, data: SavingGoalContributionRequest) =>
+    post<SavingGoal>(`/saving-goals/${id}/contributions`, data),
 
   // Reports
   monthlySummary: (year: number, month: number) =>

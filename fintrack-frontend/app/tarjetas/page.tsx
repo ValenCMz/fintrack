@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import MainLayout from "@/app/components/layout/MainLayout";
 import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 import CardFormDialog from "@/app/components/forms/CardFormDialog";
+import CardDetailDialog from "@/app/components/CardDetailDialog";
 import { Button } from "@/components/ui/button";
 import { CreditCard, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ export default function TarjetasPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Card | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   async function load() {
     setCards(await api.listCards());
@@ -80,6 +82,15 @@ export default function TarjetasPage() {
         card={editing}
       />
 
+      <CardDetailDialog
+        open={detailId !== null}
+        onOpenChange={(v) => {
+          if (!v) setDetailId(null);
+        }}
+        cardId={detailId}
+        onChanged={load}
+      />
+
       <div className="card-gradient rounded-xl p-5">
         {loading ? (
           <p className="text-muted-foreground text-sm">Cargando...</p>
@@ -95,13 +106,29 @@ export default function TarjetasPage() {
                 <div>
                   <p className="font-medium">{c.holderName}</p>
                   <p className="text-sm text-muted-foreground">
-                    Vence {formatDate(c.dueDay)}
+                    Cierre {formatDate(c.nextDueDate)}
+                    {c.nextInstallmentDueDate
+                      ? ` · Próxima cuota ${formatDate(c.nextInstallmentDueDate)}`
+                      : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
-                  <p className="font-display font-semibold text-expense">
-                    {formatMoney(c.amount)}
-                  </p>
+                  <div className="text-right">
+                    <p className="font-display font-semibold text-expense">
+                      {formatMoney(c.outstanding)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {c.nextInstallmentAmount != null
+                        ? `próxima cuota ${formatMoney(c.nextInstallmentAmount)}`
+                        : "sin cuotas impagas"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setDetailId(c.id)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Detalle
+                  </button>
                   <button
                     onClick={() => openEdit(c)}
                     className="text-xs text-primary hover:underline"

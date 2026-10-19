@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.valencmz.fintrack.enums.CategoryType;
 import com.valencmz.fintrack.model.entity.Category;
 
 public interface CategoryRepository extends JpaRepository<Category, UUID> {
@@ -22,4 +23,6 @@ public interface CategoryRepository extends JpaRepository<Category, UUID> {
     // Resuelve una categoría visible para el usuario (propia o global).
     @Query("select c from Category c where c.id = :id and (c.user.id = :userId or c.user is null)")
     Optional<Category> findVisibleById(@Param("id") UUID id, @Param("userId") UUID userId);
+
+    Optional<Category> findFirstByNameAndUserIsNullAndType(String name, CategoryType type);
 }

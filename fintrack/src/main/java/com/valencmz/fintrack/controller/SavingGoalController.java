@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 import com.valencmz.fintrack.errors.ApiResponse;
+import com.valencmz.fintrack.model.dto.savinggoal.SavingGoalContributionRequest;
 import com.valencmz.fintrack.model.dto.savinggoal.SavingGoalRequest;
 import com.valencmz.fintrack.model.dto.savinggoal.SavingGoalResponse;
 import com.valencmz.fintrack.model.entity.auth.UserAuth;
@@ -58,6 +59,14 @@ public class SavingGoalController {
             @Valid @RequestBody SavingGoalRequest request,
             @AuthenticationPrincipal UserAuth userAuth) {
         return ResponseEntity.ok(ApiResponse.success(savingGoalService.update(id, request, userAuth)));
+    }
+
+    @PostMapping("/{id}/contributions")
+    public ResponseEntity<ApiResponse<SavingGoalResponse>> contribute(
+            @PathVariable UUID id,
+            @Valid @RequestBody SavingGoalContributionRequest request,
+            @AuthenticationPrincipal UserAuth userAuth) {
+        return ResponseEntity.ok(ApiResponse.success(savingGoalService.contribute(id, request, userAuth)));
     }
 
     @DeleteMapping("/{id}")

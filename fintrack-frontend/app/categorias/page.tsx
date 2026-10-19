@@ -5,6 +5,7 @@ import MainLayout from "@/app/components/layout/MainLayout";
 import ConfirmDeleteButton from "@/app/components/ConfirmDeleteButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -128,32 +129,41 @@ export default function CategoriasPage() {
             onSubmit={handleSubmit}
             className="grid grid-cols-1 md:grid-cols-3 gap-4"
           >
-            <Input
-              placeholder="Nombre"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-            />
-            <select
-              className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value as CategoryType })}
-            >
-              {(Object.keys(TYPE_LABELS) as CategoryType[]).map((t) => (
-                <option key={t} value={t}>
-                  {TYPE_LABELS[t]}
-                </option>
-              ))}
-            </select>
-            <label className="flex items-center gap-3 bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm">
-              Color
-              <input
-                type="color"
-                value={form.color}
-                onChange={(e) => setForm({ ...form, color: e.target.value })}
-                className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
+            <Field label="Nombre">
+              <Input
+                placeholder="Ej. Supermercado"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
               />
-            </label>
+            </Field>
+            <Field label="Tipo">
+              <select
+                className="bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm"
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value as CategoryType })}
+              >
+                {(Object.keys(TYPE_LABELS) as CategoryType[]).map((t) => (
+                  <option key={t} value={t}>
+                    {TYPE_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Color">
+              <div className="flex items-center gap-3 bg-secondary/50 border border-border/50 rounded-md px-3 py-2 text-sm">
+                <span
+                  className="w-6 h-6 rounded shrink-0 border border-border/50"
+                  style={{ backgroundColor: form.color }}
+                />
+                <input
+                  type="color"
+                  value={form.color}
+                  onChange={(e) => setForm({ ...form, color: e.target.value })}
+                  className="w-10 h-8 rounded cursor-pointer bg-transparent border-0"
+                />
+              </div>
+            </Field>
             <DialogFooter className="md:col-span-3">
               <Button type="button" variant="outline" onClick={resetForm}>
                 Cancelar

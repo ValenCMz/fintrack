@@ -1,7 +1,5 @@
 package com.valencmz.fintrack.model.entity;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -27,11 +25,9 @@ public class Card {
     @Column(name = "holderName", nullable = false)
     private String holderName;
 
-    @Column(name = "dueDay", nullable = false)
-    private LocalDate dueDay;
-
-    @Column(name = "amount", nullable = false)
-    private BigDecimal amount;
+    // Dia del mes en que vence el resumen (1-31).
+    @Column(name = "dueDayOfMonth", nullable = false)
+    private int dueDayOfMonth;
 
     @Column(name = "active", nullable = false)
     private boolean active;
