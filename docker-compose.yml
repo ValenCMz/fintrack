@@ -51,6 +51,7 @@ services:
     restart: unless-stopped
     environment:
       BACKEND_INTERNAL_URL: http://backend:8080/api
+      HOSTNAME: 0.0.0.0
     depends_on:
       backend:
         condition: service_healthy
