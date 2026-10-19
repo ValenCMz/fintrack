@@ -1,107 +1,130 @@
-# Deploy — FinTrack en Oracle Cloud Free Tier (dockerizado)
+# Deploy / Cómo correr FinTrack
 
-> Estado: **Fase 0 (código) completa y verificada** el 2026-10-09:
-> `mvn test` 127/127 verde, `npm run build` verde, stack completo (`docker compose up`)
-> probado de punta a punta en local (register, login, refresh por cookie, health UP),
-> backup/restore probados (`deploy/backups/`). Pendientes: Fases 1-4 (VM + Tailscale).
->
-> Decisión de contexto: usar la app en solitario, gratis. Estado portátil: la base
-> vive en el volumen de Postgres y los secrets en `.env`; el resto se reconstruye
-> idéntico con `docker compose`. Migrar = backup + levantar el compose en otro lado.
+App dockerizada: Postgres + backend (Spring Boot) + frontend (Next.js), orquestados con
+`docker compose`. Dos formas de usarla:
 
-## Arquitectura
+1. **Local (recomendado para uso personal)** — todo en tu Mac, accesible en `localhost`.
+2. **Nube (opcional / a futuro)** — en una VM con acceso privado por Tailscale.
+
+---
+
+## 1. Uso local (recomendado)
+
+Requiere **Docker Desktop** instalado y corriendo.
+
+### Levantar
+```bash
+docker compose up -d --build
+```
+Abrí **http://localhost:3000** en el navegador.
+
+> Puertos: se configuran en `.env` con `FRONTEND_PORT` (host) y `BACKEND_PORT`. Por
+> defecto 3000 y 8080. Si el 3000 ya lo usás en otro proyecto, cambiá `FRONTEND_PORT`
+> (y `FRONTEND_URL`/`CORS_ALLOWED_ORIGINS` para que coincidan) y volvé a correr
+> `docker compose up -d`.
+
+### Apagar (liberar RAM/CPU)
+```bash
+docker compose down      # apaga los contenedores; los datos quedan en el volumen
+```
+Los datos de Postgres viven en el volumen `pgdata`, así que apagar/prender no borra nada.
+
+### Estado y logs
+```bash
+docker compose ps
+docker compose logs -f backend
+docker compose logs -f frontend
+```
+
+### Configuración (`.env`)
+Se copia de `.env.example`:
+```bash
+cp .env.example .env
+```
+Para uso local los valores por defecto ya sirven:
+- `FRONTEND_URL=http://localhost:3000`
+- `COOKIE_SECURE=false`
+- `JWT_SECRET` → poner uno propio: `openssl rand -hex 64`
+
+El **reset de password por email** solo funciona si completás `MAIL_*` con un SMTP real
+(Gmail + *app password*). Sin eso, el resto de la app anda igual.
+
+### Backups
+```bash
+./deploy/backup.sh                         # genera deploy/backups/fintrack-<fecha>.sql.gz
+./deploy/restore.sh deploy/backups/<...>.sql.gz   # ensayo en una BD temporal
+```
+
+---
+
+## 2. Despliegue en la nube (opcional / a futuro)
+
+Objetivo: la app viva aunque la Mac esté apagada, con una URL privada (HTTPS) accesible
+desde tus dispositivos. Estado: **no desplegado**; runbook de referencia.
+
+### Arquitectura
 
 ```
 Celu / Mac (navegador)
-   │  Tailscale app encendida (WireGuard, cifrado punta a punta)
+   │  https://<vm>.<tailnet>.ts.net      (privado, Tailscale/WireGuard)
    ▼
-VM Oracle (Ampere A1, free tier)
-   │  Tailscale Serve  →  https://<vm>.<tailnet>.ts.net   (TLS automático)
-   ▼
-frontend  (Next 16, standalone, :3000)
-   │  rewrites de Next: /api/*  →  backend (mismo origen, sin CORS)
-   ▼
-backend  (Spring Boot 4 / Java 21, :8080, interno)
-   │  docker network interna (db no expuesta)
-   ▼
-Postgres 17 (volumen `pgdata`, solo desde el network interno)
+VM (Ubuntu 24.04, ARM)
+   ├── tailscaled + Tailscale Serve  →  termina TLS, reenvía a :3000
+   ├── frontend (Next.js standalone, :3000)
+   │     └── rewrite `/api/*` → backend:8080/api/* (mismo origen, sin CORS)
+   ├── backend (Spring Boot, :8080)
+   └── db (Postgres 17-alpine, solo red interna)
 ```
 
-Decisiones tomadas:
+- **Ningún puerto abierto a internet.** Acceso solo por el tailnet.
+- **Mismo origen**: el frontend proxea `/api` al backend; sin CORS y la cookie fluye.
 
-- **Sin puertos públicos.** La VM no abre 80/443; la app solo es alcanzable por
-  dispositivos del tailnet (privada para datos financieros). SSH tampoco público.
-- **Mismo origen** (frontend proxea `/api`): no hay CORS en producción y la cookie
-  `refreshTokenFinTrack` fluye normal.
-- **COOKIE_SECURE=true** en la VM (la página es HTTPS por Tailscale).
-- **SMTP obligatorio** (Gmail + app password): sin él, el flujo de reset de password
-  no llega y quedarías sin acceso.
-- `ddl-auto=update` se mantiene: válido para uso personal, no es estrategia de
-  migraciones con formato. Conocido.
+### VM (Oracle Cloud Free Tier — opciones realmente gratis)
 
-## Variables de entorno (`.env`)
+| Proveedor | Spec | Vigencia | Letra chica |
+|---|---|---|---|
+| Oracle Always Free (Ampere A1) | **2 OCPU ARM / 12 GB** / 200 GB / 10 TB | Para siempre | Ojo: era 4/24 y lo **bajaron a 2/12 en junio 2026**. Reclama instancias idle (<20% CPU/mem/red por 7 días). Piden tarjeta. |
+| Google Cloud e2-micro | 2 vCPU / **1 GB RAM** / 30 GB | Para siempre | Solo 3 regiones de US; 1 GB queda justo para este stack (habría que limitar el JVM). |
 
-Ver `.env.example`. Claves que importan:
+Pasos (Oracle):
+1. Instancia **Ampere A1 → 2 OCPU / 12 GB**, imagen **Ubuntu 24.04 (arm64)**.
+   - Evitá shapes x86 como `E2.1.Micro` (1 GB) o `E5.Flex` (no es free).
+   - Cuidado con imágenes viejas (20.04 está EOL y rompe el instalador de Docker).
+2. **Red (VCN):** hace falta **Internet Gateway** + ruta `0.0.0.0/0 → IGW` + regla
+   ingress TCP 22. Sin eso, la VM no tiene salida ni entrada a internet (síntoma:
+   el SSH queda "colgado"). Lo más simple es crear la VCN con el **VCN Wizard →
+   "Create VCN with Internet Connectivity"**.
+3. SSH: `ssh -i <clave> ubuntu@<ip-pública>`.
+4. Instalar Docker con el script oficial (NO usar el paquete `docker-compose-plugin`
+   de apt, que falla en distros EOL):
+   ```bash
+   curl -fsSL https://get.docker.com | sudo sh
+   sudo usermod -aG docker ubuntu
+   sudo systemctl enable --now docker
+   ```
+4. Tailscale:
+   ```bash
+   curl -fsSL https://tailscale.com/install.sh | sh
+   sudo systemctl enable --now tailscaled
+   sudo tailscale up
+   sudo tailscale serve --bg http://localhost:3000
+   ```
+4. Clonar y desplegar:
+   ```bash
+   git clone https://github.com/ValenCMz/fintrack.git && cd fintrack
+   cp .env.example .env      # FRONTEND_URL=https://<vm>.<tailnet>.ts.net, COOKIE_SECURE=true, MAIL_*, JWT_SECRET
+   docker compose up -d --build
+   ```
+5. Cerrar el puerto 22 público una vez que entrás por Tailscale.
 
-| Variable | Nota |
-|---|---|
-| `JWT_SECRET` | generar con `openssl rand -hex 64` |
-| `MAIL_*` | SMTP de Gmail con **app password** |
-| `FRONTEND_URL` | la URL final del tailnet (`https://vm.tunombre.ts.net`) |
-| `COOKIE_SECURE` | `true` en la VM |
-| `CORS_ALLOWED_ORIGINS` | en prod no hace falta (mismo origen); en dev local queda `http://localhost:3000` |
+### Migrar de host
+Con todo dockerizado, migrar es: `./deploy/backup.sh` en el origen → levantar el mismo
+compose en el destino → `pg_restore`. La versión de Postgres debe ser igual o posterior.
 
-## Comandos
+---
 
-```bash
-# Build + levantar (dev local, raíz del repo)
-docker compose up -d --build
+## Riesgos y decisiones
 
-# Productivo en la VM
-docker compose up -d --build   # con .env apuntando a la config de prod
-
-# Logs
-docker compose logs -f backend frontend
-
-# Backup manual (crea deploy/backups/fintrack-fecha.sql.gz)
-./deploy/backup.sh
-
-# Restore a una BD temporal (ensayo)
-./deploy/restore.sh deploy/backups/<archivo>.sql.gz
-```
-
-## Fases
-
-**Fase 0 — Código (repo, en curso):**
-- CORS por env (`SecurityConfig`), `FRONTEND_URL` por env, actuator para healthcheck.
-- `next.config.ts`: `output: standalone` + rewrite de `/api` al backend (leyendo
-  `BACKEND_INTERNAL_URL`, default localhost para dev).
-- `Dockerfile` backend (multi-stage maven→jre, usuario no-root) y frontend (standalone).
-- `docker-compose.yml` (db/backend/frontend, healthchecks, `restart: unless-stopped`).
-- `deploy/backup.sh` / `deploy/restore.sh` (pg_dump + retention 7 días).
-- Verificación local: `mvn -o test` verde + `npm run build` verde + `docker compose up` verde.
-
-**Fase 1 — VM Oracle (manual, coordinado):**
-- Alta free tier: instancia Ampere A1 (Ubuntu 24.04), clave SSH de Oracle.
-- VCN/inbound cerrado (solo SSH por tailnet). `unattended-upgrades`.
-- Docker Engine + compose plugin.
-
-**Fase 2 — Tailscale (manual, coordinado):**
-- Tailscale en VM, Mac y celular (mismo tailnet).
-- `tailscale serve --bg http://localhost:3000` → `https://<vm>.<tailnet>.ts.net`.
-
-**Fase 3 — Deploy (manual, coordinado):**
-- Clonar repo en la VM, armar `.env`, `docker compose up -d --build`.
-- Healthcheck: `GET https://.../api/actuator/health` → `status: UP`.
-- Probar: login (cookie Secure), alta de gasto, reset de password con el link del tailnet.
-
-**Fase 4 — Operación:**
-- cron diario `deploy/backup.sh` en la VM (retention 7).
-- Ensayo de restore cada tanto en una BD temporal.
-- Migrar a otro hosting = backup + mismo compose + restore (todo documentado arriba).
-
-## Riesgos asumidos
-
-- Free tier de Oracle limita CPU sostenida alta; no lo vas a notar acá.
-- Registro abierto (`/auth/register`) pero la app es privada del tailnet.
-- `ddl-auto=update` (ver arriba). Backups diarios son la red de seguridad.
+- Migraciones con Flyway (`ddl-auto=validate`): el esquema se versiona en `db/migration`; las bases existentes se baselinan y solo reciben las migraciones nuevas.
+- `/auth/register` queda abierto; en local/no público no es problema.
+- En local, el servicio solo existe mientras Docker corre; los datos persisten en el volumen.

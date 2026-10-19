@@ -109,22 +109,26 @@ src/main/java/com/valencmz/fintrack/
 - **Base de datos:** `fintrackdb`
 - **ORM:** Hibernate 7.2
 - **Dialect:** PostgreSQL
-- **Estrategia DDL:** `update` (Hibernate genera/actualiza las tablas automáticamente)
+- **Estrategia DDL:** Flyway (migraciones SQL versionadas) + `ddl-auto=validate`.
 
-#### Cambios que `ddl-auto=update` no aplica
+#### Migraciones (Flyway)
 
-`update` crea tablas y columnas nuevas, pero **no afloja restricciones existentes**
-y no las borra. En este proyecto ya pasó una vez y hay que hacerlo a mano:
+El esquema lo controla Flyway, no Hibernate. En runtime `ddl-auto=validate`: la
+app solo **verifica** que las tablas coincidan con las entidades y falla al
+arrancar si hay drift. Los scripts viven en `src/main/resources/db/migration`
+y se versionan con `V<n>__descripcion.sql` (un archivo ya aplicado nunca se
+edita; el cambio va en uno nuevo).
 
-```sql
--- account.owner era NOT NULL y el DTO lo trata como opcional.
--- Sin esto, POST /accounts sin "owner" devuelve 409.
-ALTER TABLE account ALTER COLUMN owner DROP NOT NULL;
-```
+- `V1__esquema_inicial.sql`: esquema base (pre-Fase B).
+- `V2__tarjetas_modelo_completo.sql`: modelo completo de tarjetas.
 
-Si agregás una columna que después querés nullable, o cambiás el tipo de una
-existente, el `ALTER TABLE` va aparte. No hay Flyway ni Liquibase en el
-proyecto, así que este bloque es el registro.
+Para agregar un cambio de esquema: crear `V3__...sql` con el `ALTER`/`CREATE`
+correspondiente. No hace falta tocar la base a mano.
+
+Con `spring.flyway.baseline-on-migrate=true`, una base existente sin historial
+se marca en la versión 1 y solo recibe las migraciones siguientes; una base
+nueva corre todo desde `V1`. En los tests Flyway se desactiva
+(`spring.flyway.enabled=false`) y Hibernate arma el esquema con `create-drop`.
 
 ### Enumeraciones (Enums)
 
